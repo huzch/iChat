@@ -55,7 +55,8 @@ class ServiceDiscovery {
     }
     // 异步监控服务
     _watcher = std::make_shared<etcd::Watcher>(
-        *_client, base_dir, std::bind(&call_back, this, placeholders::_1),
+        *_client, base_dir,
+        std::bind(&ServiceDiscovery::call_back, this, std::placeholders::_1),
         true);
   }
 
