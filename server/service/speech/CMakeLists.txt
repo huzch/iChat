@@ -1,9 +1,12 @@
 # cmake版本
 cmake_minimum_required(VERSION 3.12.0)
 # 工程名称
-project(speech_server)
+project(speech_service)
+# c++编译标准
+set(CMAKE_CXX_STANDARD 17)
 # 目标名称
-set(target "speech_server")
+set(src_target "speech_server")
+set(test_target "speech_client")
 
 set(proto_path ${CMAKE_CURRENT_SOURCE_DIR}/../../proto)
 set(proto_files speech.proto)
@@ -34,11 +37,51 @@ endforeach()
 # 收集自己编写的源文件
 set(src "")
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src src)
+set(test_src "")
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/test test_src)
 # 添加执行目标和依赖
-add_executable(${target} ${proto_src} ${src})
-# 添加动态链接库
-target_link_libraries(${target} -lgflags -lspdlog -lfmt -lbrpc -lssl -lcrypto -lprotobuf -lleveldb -letcd-cpp-api -lcpprest -lcurl -ljsoncpp)
+add_executable(${src_target} ${proto_src} ${src})
+add_executable(${test_target} ${proto_src} ${test_src})
 # 头文件搜索路径
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../common)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../third/include)
+include_directories(/opt/homebrew/include)
+include_directories(/usr/local/include)
+# 添加动态链接库
+target_link_directories(${src_target} PRIVATE /opt/homebrew/lib)
+target_link_directories(${src_target} PRIVATE /usr/local/lib)
+target_link_libraries(${src_target}
+  -lgflags
+  -lspdlog
+  -lfmt
+  -lbrpc
+  -lssl
+  -lcrypto
+  -lprotobuf
+  -lleveldb
+  -letcd-cpp-api
+  -lcpprest
+  -lcurl
+  -ljsoncpp
+  -labsl_log_internal_check_op
+  -labsl_log_internal_message
+)
+target_link_directories(${test_target} PRIVATE /opt/homebrew/lib)
+target_link_directories(${test_target} PRIVATE /usr/local/lib)
+target_link_libraries(${test_target}
+  -lgflags
+  -lspdlog
+  -lfmt
+  -lbrpc
+  -lssl
+  -lcrypto
+  -lprotobuf
+  -lleveldb
+  -letcd-cpp-api
+  -lcpprest
+  -lcurl
+  -ljsoncpp
+  -labsl_log_internal_check_op
+  -labsl_log_internal_message
+)

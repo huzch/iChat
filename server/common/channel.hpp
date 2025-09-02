@@ -1,6 +1,8 @@
 #pragma once
 #include <brpc/channel.h>
 
+#include <list>
+
 #include "logger.hpp"
 
 namespace huzch {
@@ -150,4 +152,4 @@ class ServiceManager {
   std::mutex _mutex;
 };
 
-}
+}  // namespace huzch

@@ -2,7 +2,7 @@
 
 #include <gflags/gflags.h>
 
-DEFINE_bool(run_mode, false, "程序运行模式: false调试/true发布");
+DEFINE_bool(run_mode, true, "程序运行模式: true调试/false发布");
 DEFINE_string(log_file, "", "发布模式下日志文件");
 DEFINE_int32(log_level, 0, "发布模式下日志等级");
 
