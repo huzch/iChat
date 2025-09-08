@@ -17,18 +17,17 @@ class SpeechServiceImpl : public SpeechService {
                        SpeechRecognizeRsp* response,
                        google::protobuf::Closure* done) {
     brpc::ClosureGuard rpc_guard(done);
+    response->set_request_id(request->request_id());
 
     std::string err;
     std::string ret = _asr_client->recognize(request->speech_content(), err);
     if (ret.empty()) {
       LOG_ERROR("{} 语音识别失败", request->request_id());
-      response->set_request_id(request->request_id());
       response->set_success(false);
       response->set_errmsg("语音识别失败:" + err);
       return;
     }
 
-    response->set_request_id(request->request_id());
     response->set_success(true);
     response->set_recognition_result(ret);
   }

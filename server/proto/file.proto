@@ -13,7 +13,7 @@ message GetSingleFileReq {
 message GetSingleFileRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
+    optional string errmsg = 3; 
     optional FileDownloadData file_data = 4;
 }
 
@@ -26,7 +26,7 @@ message GetMultiFileReq {
 message GetMultiFileRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
+    optional string errmsg = 3;
     map<string, FileDownloadData> file_data = 4;//文件ID与文件数据的映射map
 }
 
@@ -39,8 +39,8 @@ message PutSingleFileReq {
 message PutSingleFileRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3;
-    FileMessageInfo file_info = 4; //返回了文件组织的元信息
+    optional string errmsg = 3;
+    optional FileMessageInfo file_info = 4; //返回了文件组织的元信息
 }
 
 message PutMultiFileReq {
@@ -52,7 +52,7 @@ message PutMultiFileReq {
 message PutMultiFileRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
+    optional string errmsg = 3; 
     repeated FileMessageInfo file_info = 4;
 }
 
