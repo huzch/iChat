@@ -10,6 +10,18 @@ namespace huzch {
 
 class FileServiceImpl : public FileService {
  public:
+  FileServiceImpl(const std::string& storage_path)
+      : _storage_path(storage_path) {
+    mode_t tmp = umask(0);
+    mkdir(_storage_path.c_str(), 0775);
+    umask(tmp);
+
+    // 由于生成的uuid前没有/，所以字符串连接时加上
+    if (_storage_path.back() != '/') {
+      _storage_path.push_back('/');
+    }
+  }
+
   void GetSingleFile(google::protobuf::RpcController* controller,
                      const GetSingleFileReq* request,
                      GetSingleFileRsp* response,
@@ -18,7 +30,8 @@ class FileServiceImpl : public FileService {
     response->set_request_id(request->request_id());
 
     std::string body;
-    bool ret = read_file(request->file_id(), body);
+    std::string file_name = _storage_path + request->file_id();
+    bool ret = read_file(file_name, body);
     if (!ret) {
       LOG_ERROR("{} 文件读取失败", request->request_id());
       response->set_success(false);
@@ -39,7 +52,8 @@ class FileServiceImpl : public FileService {
 
     for (size_t i = 0; i < request->file_id_list_size(); ++i) {
       std::string body;
-      bool ret = read_file(request->file_id_list(i), body);
+      std::string file_name = _storage_path + request->file_id_list(i);
+      bool ret = read_file(file_name, body);
       if (!ret) {
         LOG_ERROR("{} 文件读取失败", request->request_id());
         response->set_success(false);
@@ -63,7 +77,8 @@ class FileServiceImpl : public FileService {
     response->set_request_id(request->request_id());
 
     std::string fid = uuid();
-    bool ret = write_file(fid, request->file_data().file_content());
+    std::string file_name = _storage_path + fid;
+    bool ret = write_file(file_name, request->file_data().file_content());
     if (!ret) {
       LOG_ERROR("{} 文件写入失败", request->request_id());
       response->set_success(false);
@@ -87,7 +102,8 @@ class FileServiceImpl : public FileService {
 
     for (size_t i = 0; i < request->file_data_size(); ++i) {
       std::string fid = uuid();
-      bool ret = write_file(fid, request->file_data(i).file_content());
+      std::string file_name = _storage_path + fid;
+      bool ret = write_file(file_name, request->file_data(i).file_content());
       if (!ret) {
         LOG_ERROR("{} 文件写入失败", request->request_id());
         response->set_success(false);
@@ -104,6 +120,7 @@ class FileServiceImpl : public FileService {
   }
 
  private:
+  std::string _storage_path;
 };
 
 class FileServer {
@@ -129,9 +146,10 @@ class FileServerBuilder {
     _reg_client->register_service(service_name, access_host);
   }
 
-  void init_rpc_server(int port, int timeout, int num_threads) {
+  void init_rpc_server(int port, int timeout, int num_threads,
+                       const std::string& storage_path) {
     _server = std::make_shared<brpc::Server>();
-    auto file_service = new FileServiceImpl();
+    auto file_service = new FileServiceImpl(storage_path);
     int ret = _server->AddService(file_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
     if (ret == -1) {

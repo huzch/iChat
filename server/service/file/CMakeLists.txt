@@ -71,6 +71,7 @@ target_link_directories(${test_target} PRIVATE /opt/homebrew/lib)
 target_link_directories(${test_target} PRIVATE /usr/local/lib)
 target_link_libraries(${test_target}
   -lgflags
+  -lgtest
   -lspdlog
   -lfmt
   -lbrpc

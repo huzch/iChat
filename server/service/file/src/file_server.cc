@@ -16,6 +16,8 @@ DEFINE_int32(rpc_port, 10002, "rpc服务器监听端口");
 DEFINE_int32(rpc_timeout, -1, "rpc调用超时时间");
 DEFINE_int32(rpc_threads, 1, "rpc的io线程数");
 
+DEFINE_string(storage_path, "./data", "文件存储路径");
+
 int main(int argc, char* argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   huzch::init_logger(FLAGS_run_mode, FLAGS_log_file, FLAGS_log_level);
@@ -28,7 +30,8 @@ int main(int argc, char* argv[]) {
                       FLAGS_access_host);
 
   // 初始化rpc服务器
-  fsb.init_rpc_server(FLAGS_rpc_port, FLAGS_rpc_timeout, FLAGS_rpc_threads);
+  fsb.init_rpc_server(FLAGS_rpc_port, FLAGS_rpc_timeout, FLAGS_rpc_threads,
+                      FLAGS_storage_path);
 
   auto file_server = fsb.build();
   file_server->start();

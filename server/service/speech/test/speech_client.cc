@@ -43,24 +43,26 @@ int main(int argc, char* argv[]) {
 
   // 发起rpc服务调用
   huzch::SpeechService_Stub stub(channel.get());
-  brpc::Controller controller;
+  auto controller = new brpc::Controller();
   huzch::SpeechRecognizeReq req;
   req.set_request_id("111");
   req.set_speech_content(file_content);
-  huzch::SpeechRecognizeRsp rsp;
-  stub.SpeechRecognize(&controller, &req, &rsp, nullptr);
+  auto rsp = new huzch::SpeechRecognizeRsp();
 
-  if (controller.Failed()) {
-    huzch::LOG_ERROR("rpc调用失败: {}", controller.ErrorText());
+  // 由于异步调用，controller与rsp必须在堆创建，交由内部函数销毁
+  stub.SpeechRecognize(controller, &req, rsp, nullptr);
+
+  if (controller->Failed()) {
+    huzch::LOG_ERROR("rpc调用失败: {}", controller->ErrorText());
     return -1;
   }
-  if (!rsp.success()) {
-    huzch::LOG_ERROR("rpc调用失败: {}", rsp.errmsg());
+  if (!rsp->success()) {
+    huzch::LOG_ERROR("rpc调用失败: {}", rsp->errmsg());
     return -1;
   }
 
-  huzch::LOG_DEBUG("收到请求id: {}", rsp.request_id());
-  huzch::LOG_DEBUG("收到识别结果: {}", rsp.recognition_result());
+  huzch::LOG_DEBUG("收到请求id: {}", rsp->request_id());
+  huzch::LOG_DEBUG("收到识别结果: {}", rsp->recognition_result());
 
   return 0;
 }
