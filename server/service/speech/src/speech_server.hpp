@@ -17,12 +17,13 @@ class SpeechServiceImpl : public SpeechService {
                        SpeechRecognizeRsp* response,
                        google::protobuf::Closure* done) {
     brpc::ClosureGuard rpc_guard(done);
-    response->set_request_id(request->request_id());
+    std::string request_id = request->request_id();
+    response->set_request_id(request_id);
 
     std::string err;
     std::string ret = _asr_client->recognize(request->speech_content(), err);
     if (ret.empty()) {
-      LOG_ERROR("{} 语音识别失败", request->request_id());
+      LOG_ERROR("{} 语音识别失败", request_id);
       response->set_success(false);
       response->set_errmsg("语音识别失败:" + err);
       return;
@@ -57,11 +58,11 @@ class SpeechServerBuilder {
     _asr_client = std::make_shared<ASRClient>(app_id, api_key, secret_key);
   }
 
-  void init_reg_client(const std::string& reg_host,
-                       const std::string& service_name,
-                       const std::string& access_host) {
-    _reg_client = std::make_shared<ServiceRegistry>(reg_host);
-    _reg_client->register_service(service_name, access_host);
+  void init_registry_client(const std::string& registry_host,
+                            const std::string& service_name,
+                            const std::string& service_host) {
+    _registry_client = std::make_shared<ServiceRegistry>(registry_host);
+    _registry_client->register_service(service_name, service_host);
   }
 
   void init_rpc_server(int port, int timeout, int num_threads) {
@@ -90,6 +91,11 @@ class SpeechServerBuilder {
   }
 
   SpeechServer::Ptr build() {
+    if (!_registry_client) {
+      LOG_ERROR("未初始化服务注册模块");
+      abort();
+    }
+
     if (!_server) {
       LOG_ERROR("未初始化rpc服务器模块");
       abort();
@@ -101,7 +107,7 @@ class SpeechServerBuilder {
 
  private:
   ASRClient::Ptr _asr_client;
-  ServiceRegistry::Ptr _reg_client;
+  ServiceRegistry::Ptr _registry_client;
   std::shared_ptr<brpc::Server> _server;
 };
 

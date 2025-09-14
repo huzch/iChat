@@ -78,7 +78,7 @@ class ESUser {
       user.avatar_id(ret[i]["_source"]["avatar_id"].asString());
       user.name(ret[i]["_source"]["name"].asString());
       user.phone(ret[i]["_source"]["phone"].asString());
-      user.descrption(ret[i]["_source"]["descrption"].asString());
+      user.description(ret[i]["_source"]["description"].asString());
       users.push_back(user);
     }
     return users;

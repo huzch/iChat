@@ -5,9 +5,9 @@ option cc_generic_services = true;
 //用户信息结构
 message UserInfo {
     string user_id = 1;//用户ID
-    string nickname = 2;//昵称
-    string description = 3;//个人签名/描述
-    string phone = 4; //绑定手机号
+    string name = 2;//昵称
+    string phone = 3; //绑定手机号
+    string description = 4;//个人签名/描述
     bytes  avatar = 5;//头像照片，文件内容使用二进制
 }
 
@@ -61,6 +61,7 @@ message MessageContent {
         ImageMessageInfo image_message = 5;//图片消息
     };
 }
+
 //消息结构
 message MessageInfo {
     string message_id = 1;//消息ID

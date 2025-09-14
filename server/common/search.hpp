@@ -54,9 +54,9 @@ class ESIndex {
     _index["settings"] = analysis;
   }
 
-  ESIndex& append(const std::string& key, const std::string& type = "text",
-                  const std::string& analyzer = "ik_max_word",
-                  bool enabled = true) {
+  ESIndex& append(const std::string& key, bool enabled = true,
+                  const std::string& type = "text",
+                  const std::string& analyzer = "ik_max_word") {
     Json::Value fields;
     fields["type"] = type;
     fields["analyzer"] = analyzer;

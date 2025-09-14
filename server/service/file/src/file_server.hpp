@@ -27,13 +27,14 @@ class FileServiceImpl : public FileService {
                      GetSingleFileRsp* response,
                      google::protobuf::Closure* done) {
     brpc::ClosureGuard rpc_guard(done);
-    response->set_request_id(request->request_id());
+    std::string request_id = request->request_id();
+    response->set_request_id(request_id);
 
     std::string body;
     std::string file_name = _storage_path + request->file_id();
     bool ret = read_file(file_name, body);
     if (!ret) {
-      LOG_ERROR("{} 文件读取失败", request->request_id());
+      LOG_ERROR("{} 文件读取失败", request_id);
       response->set_success(false);
       response->set_errmsg("文件读取失败");
       return;
@@ -48,14 +49,15 @@ class FileServiceImpl : public FileService {
                     const GetMultiFileReq* request, GetMultiFileRsp* response,
                     google::protobuf::Closure* done) {
     brpc::ClosureGuard rpc_guard(done);
-    response->set_request_id(request->request_id());
+    std::string request_id = request->request_id();
+    response->set_request_id(request_id);
 
     for (size_t i = 0; i < request->file_id_list_size(); ++i) {
       std::string body;
       std::string file_name = _storage_path + request->file_id_list(i);
       bool ret = read_file(file_name, body);
       if (!ret) {
-        LOG_ERROR("{} 文件读取失败", request->request_id());
+        LOG_ERROR("{} 文件读取失败", request_id);
         response->set_success(false);
         response->set_errmsg("文件读取失败");
         return;
@@ -74,20 +76,21 @@ class FileServiceImpl : public FileService {
                      PutSingleFileRsp* response,
                      google::protobuf::Closure* done) {
     brpc::ClosureGuard rpc_guard(done);
-    response->set_request_id(request->request_id());
+    std::string request_id = request->request_id();
+    response->set_request_id(request_id);
 
-    std::string fid = uuid();
-    std::string file_name = _storage_path + fid;
+    std::string file_id = uuid();
+    std::string file_name = _storage_path + file_id;
     bool ret = write_file(file_name, request->file_data().file_content());
     if (!ret) {
-      LOG_ERROR("{} 文件写入失败", request->request_id());
+      LOG_ERROR("{} 文件写入失败", request_id);
       response->set_success(false);
       response->set_errmsg("文件写入失败");
       return;
     }
 
     response->set_success(true);
-    response->mutable_file_info()->set_file_id(fid);
+    response->mutable_file_info()->set_file_id(file_id);
     response->mutable_file_info()->set_file_size(
         request->file_data().file_size());
     response->mutable_file_info()->set_file_name(
@@ -98,21 +101,22 @@ class FileServiceImpl : public FileService {
                     const PutMultiFileReq* request, PutMultiFileRsp* response,
                     google::protobuf::Closure* done) {
     brpc::ClosureGuard rpc_guard(done);
-    response->set_request_id(request->request_id());
+    std::string request_id = request->request_id();
+    response->set_request_id(request_id);
 
     for (size_t i = 0; i < request->file_data_size(); ++i) {
-      std::string fid = uuid();
-      std::string file_name = _storage_path + fid;
+      std::string file_id = uuid();
+      std::string file_name = _storage_path + file_id;
       bool ret = write_file(file_name, request->file_data(i).file_content());
       if (!ret) {
-        LOG_ERROR("{} 文件写入失败", request->request_id());
+        LOG_ERROR("{} 文件写入失败", request_id);
         response->set_success(false);
         response->set_errmsg("文件写入失败");
         return;
       }
 
       auto info = response->add_file_info();
-      info->set_file_id(fid);
+      info->set_file_id(file_id);
       info->set_file_size(request->file_data(i).file_size());
       info->set_file_name(request->file_data(i).file_name());
     }
@@ -139,11 +143,11 @@ class FileServer {
 
 class FileServerBuilder {
  public:
-  void init_reg_client(const std::string& reg_host,
-                       const std::string& service_name,
-                       const std::string& access_host) {
-    _reg_client = std::make_shared<ServiceRegistry>(reg_host);
-    _reg_client->register_service(service_name, access_host);
+  void init_registry_client(const std::string& registry_host,
+                            const std::string& service_name,
+                            const std::string& service_host) {
+    _registry_client = std::make_shared<ServiceRegistry>(registry_host);
+    _registry_client->register_service(service_name, service_host);
   }
 
   void init_rpc_server(int port, int timeout, int num_threads,
@@ -168,6 +172,11 @@ class FileServerBuilder {
   }
 
   FileServer::Ptr build() {
+    if (!_registry_client) {
+      LOG_ERROR("未初始化服务注册模块");
+      abort();
+    }
+
     if (!_server) {
       LOG_ERROR("未初始化rpc服务器模块");
       abort();
@@ -178,7 +187,7 @@ class FileServerBuilder {
   }
 
  private:
-  ServiceRegistry::Ptr _reg_client;
+  ServiceRegistry::Ptr _registry_client;
   std::shared_ptr<brpc::Server> _server;
 };
 

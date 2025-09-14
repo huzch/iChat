@@ -11,9 +11,9 @@ DEFINE_bool(run_mode, true, "程序运行模式: true调试/false发布");
 DEFINE_string(log_file, "", "发布模式下日志文件");
 DEFINE_int32(log_level, 0, "发布模式下日志等级");
 
-DEFINE_string(registry_host, "http://127.0.0.1:2379", "服务注册中心地址");
+DEFINE_string(registry_host, "http://127.0.0.1:2379", "etcd服务器地址");
 DEFINE_string(base_dir, "/service", "服务根目录");
-DEFINE_string(service_name, "/file_service", "服务名");
+DEFINE_string(file_service_name, "/file_service", "文件服务名");
 
 huzch::ServiceChannel::ChannelPtr channel;
 std::string single_file_id;
@@ -26,35 +26,35 @@ TEST(put_test, single_test) {
 
   // 上传文件
   huzch::FileService_Stub stub(channel.get());
-  auto controller = new brpc::Controller();
+  brpc::Controller ctrl;
   huzch::PutSingleFileReq req;
   req.set_request_id("111");
   req.mutable_file_data()->set_file_name("_Makefile");
   req.mutable_file_data()->set_file_size(body.size());
   req.mutable_file_data()->set_file_content(body);
-  auto rsp = new huzch::PutSingleFileRsp();
-  stub.PutSingleFile(controller, &req, rsp, nullptr);
+  huzch::PutSingleFileRsp rsp;
+  stub.PutSingleFile(&ctrl, &req, &rsp, nullptr);
 
-  ASSERT_FALSE(controller->Failed());
-  ASSERT_TRUE(rsp->success());
-  single_file_id = rsp->mutable_file_info()->file_id();
+  ASSERT_FALSE(ctrl.Failed());
+  ASSERT_TRUE(rsp.success());
+  single_file_id = rsp.file_info().file_id();
 }
 
 TEST(get_test, single_test) {
   // 下载文件
   huzch::FileService_Stub stub(channel.get());
-  auto controller = new brpc::Controller();
+  brpc::Controller ctrl;
   huzch::GetSingleFileReq req;
   req.set_request_id("222");
   req.set_file_id(single_file_id);
-  auto rsp = new huzch::GetSingleFileRsp();
-  stub.GetSingleFile(controller, &req, rsp, nullptr);
+  huzch::GetSingleFileRsp rsp;
+  stub.GetSingleFile(&ctrl, &req, &rsp, nullptr);
 
-  ASSERT_FALSE(controller->Failed());
-  ASSERT_TRUE(rsp->success());
-  ASSERT_EQ(single_file_id, rsp->file_data().file_id());
+  ASSERT_FALSE(ctrl.Failed());
+  ASSERT_TRUE(rsp.success());
+  ASSERT_EQ(single_file_id, rsp.file_data().file_id());
   // 写入文件
-  huzch::write_file("_Makefile", rsp->file_data().file_content());
+  huzch::write_file("_Makefile", rsp.file_data().file_content());
 }
 
 TEST(put_test, multi_file) {
@@ -66,7 +66,7 @@ TEST(put_test, multi_file) {
 
   // 上传文件
   huzch::FileService_Stub stub(channel.get());
-  auto controller = new brpc::Controller();
+  brpc::Controller ctrl;
   huzch::PutMultiFileReq req;
   req.set_request_id("333");
 
@@ -80,35 +80,35 @@ TEST(put_test, multi_file) {
   file_data2->set_file_size(body2.size());
   file_data2->set_file_content(body2);
 
-  auto rsp = new huzch::PutMultiFileRsp();
-  stub.PutMultiFile(controller, &req, rsp, nullptr);
+  huzch::PutMultiFileRsp rsp;
+  stub.PutMultiFile(&ctrl, &req, &rsp, nullptr);
 
-  ASSERT_FALSE(controller->Failed());
-  ASSERT_TRUE(rsp->success());
-  for (size_t i = 0; i < rsp->file_info_size(); ++i) {
-    multi_file_id.push_back(rsp->file_info(i).file_id());
+  ASSERT_FALSE(ctrl.Failed());
+  ASSERT_TRUE(rsp.success());
+  for (size_t i = 0; i < rsp.file_info_size(); ++i) {
+    multi_file_id.push_back(rsp.file_info(i).file_id());
   }
 }
 
 TEST(get_test, multi_file) {
   // 下载文件
   huzch::FileService_Stub stub(channel.get());
-  auto controller = new brpc::Controller();
+  brpc::Controller ctrl;
   huzch::GetMultiFileReq req;
   req.set_request_id("444");
   for (size_t i = 0; i < multi_file_id.size(); ++i) {
     req.add_file_id_list(multi_file_id[i]);
   }
-  auto rsp = new huzch::GetMultiFileRsp();
-  stub.GetMultiFile(controller, &req, rsp, nullptr);
+  huzch::GetMultiFileRsp rsp;
+  stub.GetMultiFile(&ctrl, &req, &rsp, nullptr);
 
-  ASSERT_FALSE(controller->Failed());
-  ASSERT_TRUE(rsp->success());
+  ASSERT_FALSE(ctrl.Failed());
+  ASSERT_TRUE(rsp.success());
   for (size_t i = 0; i < multi_file_id.size(); ++i) {
-    ASSERT_TRUE(rsp->file_data().count(multi_file_id[i]));
+    ASSERT_TRUE(rsp.file_data().count(multi_file_id[i]));
   }
   // 写入文件
-  auto map = rsp->file_data();
+  auto map = rsp.file_data();
   huzch::write_file("_base.pb.h", map[multi_file_id[0]].file_content());
   huzch::write_file("_file.pb.h", map[multi_file_id[1]].file_content());
 }
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
 
   // 初始化rpc服务信道管理
   auto service_manager = std::make_shared<huzch::ServiceManager>();
-  service_manager->declare(FLAGS_base_dir + FLAGS_service_name);
+  service_manager->declare(FLAGS_base_dir + FLAGS_file_service_name);
   auto put_cb = std::bind(&huzch::ServiceManager::on_service_online,
                           service_manager.get(), std::placeholders::_1,
                           std::placeholders::_2);
@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
       FLAGS_registry_host, FLAGS_base_dir, put_cb, del_cb);
 
   // 获取rpc服务信道
-  channel = service_manager->get(FLAGS_base_dir + FLAGS_service_name);
+  channel = service_manager->get(FLAGS_base_dir + FLAGS_file_service_name);
   if (!channel) {
     return -1;
   }

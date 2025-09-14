@@ -2,8 +2,6 @@
 cmake_minimum_required(VERSION 3.12.0)
 # 工程名称
 project(speech_service)
-# c++编译标准
-set(CMAKE_CXX_STANDARD 17)
 # 目标名称
 set(src_target "speech_server")
 set(test_target "speech_client")
@@ -24,7 +22,7 @@ foreach(proto_file ${proto_files})
   if(NOT EXISTS ${proto_hh_path} OR NOT EXISTS ${proto_cc_path})
     add_custom_command(
       COMMAND protoc
-      ARGS --cpp_out=${CMAKE_CURRENT_BINARY_DIR} -I ${proto_path} ${proto_path}/${proto_file}
+      ARGS --cpp_out=${CMAKE_CURRENT_BINARY_DIR} -I ${proto_path} --experimental_allow_proto3_optiona ${proto_path}/${proto_file}
       DEPENDS ${proto_path}/${proto_file}
       OUTPUT ${proto_hh_path} ${proto_cc_path}
       COMMENT "生成protobuf框架代码:  ${proto_hh_path} and ${proto_cc_path}"
@@ -46,10 +44,8 @@ add_executable(${test_target} ${proto_src} ${test_src})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../common)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../third/include)
-include_directories(/opt/homebrew/include)
 include_directories(/usr/local/include)
 # 添加动态链接库
-target_link_directories(${src_target} PRIVATE /opt/homebrew/lib)
 target_link_directories(${src_target} PRIVATE /usr/local/lib)
 target_link_libraries(${src_target}
   -lgflags
@@ -64,10 +60,7 @@ target_link_libraries(${src_target}
   -lcpprest
   -lcurl
   -ljsoncpp
-  -labsl_log_internal_check_op
-  -labsl_log_internal_message
 )
-target_link_directories(${test_target} PRIVATE /opt/homebrew/lib)
 target_link_directories(${test_target} PRIVATE /usr/local/lib)
 target_link_libraries(${test_target}
   -lgflags
@@ -82,6 +75,4 @@ target_link_libraries(${test_target}
   -lcpprest
   -lcurl
   -ljsoncpp
-  -labsl_log_internal_check_op
-  -labsl_log_internal_message
 )

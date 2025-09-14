@@ -30,6 +30,20 @@ std::string uuid() {
   return ss.str();
 }
 
+// 随机生成6位数字验证码
+std::string verify_code() {
+  std::random_device rd;         // 设备随机数，真随机但效率低，作为种子
+  std::mt19937 generator(rd());  // 生成伪随机数
+  std::uniform_int_distribution<int> distribution(0, 9);  // 限定随机数范围
+
+  std::stringstream ss;
+  for (size_t i = 0; i < 6; ++i) {
+    ss << distribution(generator);
+  }
+
+  return ss.str();
+}
+
 bool read_file(const std::string& file_name, std::string& body) {
   std::ifstream ifs(file_name, std::ios::in | std::ios::binary | std::ios::ate);
   if (!ifs.is_open()) {

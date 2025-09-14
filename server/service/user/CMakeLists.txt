@@ -1,13 +1,13 @@
 # cmake版本
 cmake_minimum_required(VERSION 3.12.0)
 # 工程名称
-project(file_service)
+project(user_service)
 # 目标名称
-set(src_target "file_server")
-set(test_target "file_client")
+set(src_target "user_server")
+set(test_target "user_client")
 
 set(proto_path ${CMAKE_CURRENT_SOURCE_DIR}/../../proto)
-set(proto_files base.proto file.proto)
+set(proto_files base.proto file.proto user.proto)
 set(proto_hh "")
 set(proto_cc "")
 set(proto_src "")
@@ -32,13 +32,40 @@ foreach(proto_file ${proto_files})
   list(APPEND proto_src ${proto_cc_path})
 endforeach()
 
+set(odb_path ${CMAKE_CURRENT_SOURCE_DIR}/../../odb)
+set(odb_files user.hxx)
+set(odb_hxx "")
+set(odb_cxx "")
+set(odb_src "")
+
+foreach(odb_file ${odb_files})
+  string(REPLACE ".hxx" "-odb.hxx" odb_hxx ${odb_file})
+  string(REPLACE ".cxx" "-odb.cxx" odb_cxx ${odb_file})
+
+  set(odb_hxx_path ${CMAKE_CURRENT_BINARY_DIR}/${odb_hxx})
+  set(odb_cxx_path ${CMAKE_CURRENT_BINARY_DIR}/${odb_cxx})
+
+  if(NOT EXISTS ${odb_hxx_path} OR NOT EXISTS ${odb_cxx_path})
+      add_custom_command(
+        PRE_BUILD
+        COMMAND odb
+        ARGS -d mysql --std c++11 --generate-query --generate-schema ${odb_path}/${odb_file}
+        DEPENDS ${odb_path}/${odb_file}
+        OUTPUT ${odb_hxx_path} ${odb_cxx_path}
+        COMMENT "生成odb框架代码:  ${odb_hxx_path} and ${odb_cxx_path}"
+      )
+  endif()
+  # 收集odb生成的源文件
+  list(APPEND odb_src ${odb_cxx_path})
+endforeach()
+
 # 收集自己编写的源文件
 set(src "")
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src src)
 set(test_src "")
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/test test_src)
 # 添加执行目标和依赖
-add_executable(${src_target} ${proto_src} ${src})
+add_executable(${src_target} ${proto_src} ${odb_src} ${src})
 add_executable(${test_target} ${proto_src} ${test_src})
 # 头文件搜索路径
 include_directories(${CMAKE_CURRENT_BINARY_DIR})

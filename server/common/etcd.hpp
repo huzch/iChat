@@ -39,6 +39,7 @@ class ServiceRegistry {
 // 服务发现
 class ServiceDiscovery {
  public:
+  using Ptr = std::shared_ptr<ServiceDiscovery>;
   using CallBack = std::function<void(std::string, std::string)>;
 
  public:
