@@ -19,6 +19,7 @@ class UserServiceImpl : public UserService {
   UserServiceImpl(const std::shared_ptr<elasticlient::Client>& es_client,
                   const std::shared_ptr<odb::core::database>& mysql_client,
                   const std::shared_ptr<sw::redis::Redis>& redis_client,
+                  const SMSClient::Ptr& sms_client,
                   const std::string& file_service_name,
                   const ServiceManager::Ptr& service_manager)
       : _es_user(std::make_shared<ESUser>(es_client)),
@@ -26,6 +27,7 @@ class UserServiceImpl : public UserService {
         _redis_session(std::make_shared<Session>(redis_client)),
         _redis_status(std::make_shared<Status>(redis_client)),
         _redis_code(std::make_shared<Code>(redis_client)),
+        _sms_client(sms_client),
         _file_service_name(file_service_name),
         _service_manager(service_manager) {
     _es_user->index();
@@ -99,13 +101,13 @@ class UserServiceImpl : public UserService {
 
     auto user = _mysql_user->select_by_name(name);
     if (!user || password != user->password()) {
-      LOG_ERROR("{} 用户名或密码错误: {} {}", request_id, name, password);
+      LOG_ERROR("{} 用户名或密码错误: {} {} {}", request_id, name, password);
       err_rsp("用户名或密码错误");
       return;
     }
 
     bool ret = _redis_status->exists(user->user_id());
-    if (!ret) {
+    if (ret) {
       LOG_ERROR("{} 用户已在其他地方登录: {}", request_id, name);
       err_rsp("用户已在其他地方登录");
       return;
@@ -152,7 +154,7 @@ class UserServiceImpl : public UserService {
 
     std::string code_id = uuid();
     std::string code = verify_code();
-    bool ret = SMSClient::send(phone, code);
+    bool ret = _sms_client->send(phone, code);
     if (!ret) {
       LOG_ERROR("{} 短信验证码发送失败", request_id);
       err_rsp("短信验证码发送失败");
@@ -263,7 +265,7 @@ class UserServiceImpl : public UserService {
     _redis_code->remove(code_id);
 
     bool ret = _redis_status->exists(user->user_id());
-    if (!ret) {
+    if (ret) {
       LOG_ERROR("{} 用户已在其他地方登录: {}", request_id, phone);
       err_rsp("用户已在其他地方登录");
       return;
@@ -663,7 +665,7 @@ class UserServiceImpl : public UserService {
       return false;
     }
 
-    if (phone[0] != 1) {
+    if (phone[0] != '1') {
       return false;
     }
 
@@ -686,6 +688,7 @@ class UserServiceImpl : public UserService {
   Status::Ptr _redis_status;
   Code::Ptr _redis_code;
 
+  SMSClient::Ptr _sms_client;
   std::string _file_service_name;
   ServiceManager::Ptr _service_manager;
 };
@@ -716,7 +719,7 @@ class UserServerBuilder {
   void init_discovery_client(const std::string& registry_host,
                              const std::string& base_dir,
                              const std::string& service_name) {
-    _file_service_name = service_name;
+    _file_service_name = base_dir + service_name;
     _service_manager = std::make_shared<ServiceManager>();
     _service_manager->declare(base_dir + service_name);
     auto put_cb =
@@ -728,6 +731,10 @@ class UserServerBuilder {
 
     _discovery_client = std::make_shared<ServiceDiscovery>(
         registry_host, base_dir, put_cb, del_cb);
+  }
+
+  void init_sms_client(const std::string& key_id) {
+    _sms_client = std::make_shared<SMSClient>(key_id);
   }
 
   void init_es_client(const std::vector<std::string>& host_list) {
@@ -748,6 +755,11 @@ class UserServerBuilder {
   }
 
   void init_rpc_server(int port, int timeout, int num_threads) {
+    if (!_sms_client) {
+      LOG_ERROR("未初始化短信发送模块");
+      abort();
+    }
+
     if (!_es_client) {
       LOG_ERROR("未初始化es搜索引擎模块");
       abort();
@@ -766,7 +778,7 @@ class UserServerBuilder {
     _server = std::make_shared<brpc::Server>();
     auto user_service =
         new UserServiceImpl(_es_client, _mysql_client, _redis_client,
-                            _file_service_name, _service_manager);
+                            _sms_client, _file_service_name, _service_manager);
     int ret = _server->AddService(user_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
     if (ret == -1) {
@@ -807,6 +819,7 @@ class UserServerBuilder {
  private:
   ServiceRegistry::Ptr _registry_client;
   ServiceDiscovery::Ptr _discovery_client;
+  SMSClient::Ptr _sms_client;
   std::shared_ptr<elasticlient::Client> _es_client;
   std::shared_ptr<odb::core::database> _mysql_client;
   std::shared_ptr<sw::redis::Redis> _redis_client;

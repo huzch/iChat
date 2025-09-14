@@ -6,37 +6,9 @@
 #include <sstream>
 
 #include "logger.hpp"
+#include "utils.hpp"
 
 namespace huzch {
-
-bool serialize(const Json::Value& val, std::string& dst) {
-  Json::StreamWriterBuilder swb;
-  std::unique_ptr<Json::StreamWriter> sw(swb.newStreamWriter());
-
-  std::stringstream ss;
-  int ret = sw->write(val, &ss);
-  if (ret != 0) {
-    LOG_ERROR("Json序列化失败");
-    return false;
-  }
-
-  dst = ss.str();
-  return true;
-}
-
-bool unserialize(const std::string& src, Json::Value& val) {
-  Json::CharReaderBuilder crb;
-  std::unique_ptr<Json::CharReader> cr(crb.newCharReader());
-
-  std::string err;
-  bool ret = cr->parse(src.c_str(), src.c_str() + src.size(), &val, &err);
-  if (ret == false) {
-    LOG_ERROR("Json反序列化失败: {}", err);
-    return false;
-  }
-
-  return true;
-}
 
 class ESIndex {
  public:
@@ -82,7 +54,7 @@ class ESIndex {
       LOG_ERROR("索引序列化失败");
       return false;
     }
-    LOG_DEBUG("{}", body);
+    // LOG_DEBUG("{}", body);
 
     try {
       auto resp = _client->index(_name, _type, id, body);
@@ -236,7 +208,7 @@ class ESSearch {
 
     LOG_DEBUG("{}", resp.text);
     Json::Value resp_json;
-    bool ret = unserialize(resp.text, resp_json);
+    ret = unserialize(resp.text, resp_json);
     if (!ret) {
       LOG_ERROR("索引反序列化失败");
       return Json::Value();
@@ -252,4 +224,4 @@ class ESSearch {
   Json::Value _should;
 };
 
-}
+}  // namespace huzch

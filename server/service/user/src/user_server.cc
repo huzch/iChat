@@ -13,7 +13,9 @@ DEFINE_string(file_service_name, "/file_service", "文件服务名");
 DEFINE_string(instance_name, "/instance", "实例名");
 DEFINE_string(user_service_host, "127.0.0.1:10003", "用户服务实例访问地址");
 
-DEFINE_string(es_host, "http://127.0.0.1:9200", "es搜索引擎服务器地址");
+DEFINE_string(sms_key_id, "qwL1K8ekvzjW4nO0", "短信发送平台密钥id");
+
+DEFINE_string(es_host, "http://127.0.0.1:9200/", "es搜索引擎服务器地址");
 
 DEFINE_string(mysql_host, "127.0.0.1", "mysql服务器地址");
 DEFINE_string(mysql_user, "root", "mysql服务器用户名");
@@ -47,6 +49,9 @@ int main(int argc, char* argv[]) {
   // 初始化服务发现
   usb.init_discovery_client(FLAGS_registry_host, FLAGS_base_dir,
                             FLAGS_file_service_name);
+
+  // 初始化短信发送
+  usb.init_sms_client(FLAGS_sms_key_id);
 
   // 初始化es搜索引擎
   usb.init_es_client({FLAGS_es_host});

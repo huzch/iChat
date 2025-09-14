@@ -1,4 +1,7 @@
 #pragma once
+#include <cpr/cpr.h>
+#include <json/json.h>
+
 #include <fstream>
 #include <iomanip>
 #include <random>
@@ -75,6 +78,35 @@ bool write_file(const std::string& file_name, const std::string& body) {
   ofs.write(body.c_str(), body.size());
   if (!ofs.good()) {
     LOG_ERROR("文件 {} 写入失败", file_name);
+    return false;
+  }
+
+  return true;
+}
+
+bool serialize(const Json::Value& val, std::string& dst) {
+  Json::StreamWriterBuilder swb;
+  std::unique_ptr<Json::StreamWriter> sw(swb.newStreamWriter());
+
+  std::stringstream ss;
+  int ret = sw->write(val, &ss);
+  if (ret != 0) {
+    LOG_ERROR("Json序列化失败");
+    return false;
+  }
+
+  dst = ss.str();
+  return true;
+}
+
+bool unserialize(const std::string& src, Json::Value& val) {
+  Json::CharReaderBuilder crb;
+  std::unique_ptr<Json::CharReader> cr(crb.newCharReader());
+
+  std::string err;
+  bool ret = cr->parse(src.c_str(), src.c_str() + src.size(), &val, &err);
+  if (ret == false) {
+    LOG_ERROR("Json反序列化失败: {}", err);
     return false;
   }
 

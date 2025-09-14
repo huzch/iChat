@@ -22,7 +22,7 @@ foreach(proto_file ${proto_files})
   if(NOT EXISTS ${proto_hh_path} OR NOT EXISTS ${proto_cc_path})
     add_custom_command(
       COMMAND protoc
-      ARGS --cpp_out=${CMAKE_CURRENT_BINARY_DIR} -I ${proto_path} --experimental_allow_proto3_optiona ${proto_path}/${proto_file}
+      ARGS --cpp_out=${CMAKE_CURRENT_BINARY_DIR} -I ${proto_path} --experimental_allow_proto3_optional ${proto_path}/${proto_file}
       DEPENDS ${proto_path}/${proto_file}
       OUTPUT ${proto_hh_path} ${proto_cc_path}
       COMMENT "生成protobuf框架代码:  ${proto_hh_path} and ${proto_cc_path}"

@@ -22,7 +22,7 @@ foreach(proto_file ${proto_files})
   if(NOT EXISTS ${proto_hh_path} OR NOT EXISTS ${proto_cc_path})
     add_custom_command(
       COMMAND protoc
-      ARGS --cpp_out=${CMAKE_CURRENT_BINARY_DIR} -I ${proto_path} --experimental_allow_proto3_optiona ${proto_path}/${proto_file}
+      ARGS --cpp_out=${CMAKE_CURRENT_BINARY_DIR} -I ${proto_path} --experimental_allow_proto3_optional ${proto_path}/${proto_file}
       DEPENDS ${proto_path}/${proto_file}
       OUTPUT ${proto_hh_path} ${proto_cc_path}
       COMMENT "生成protobuf框架代码:  ${proto_hh_path} and ${proto_cc_path}"
@@ -40,7 +40,7 @@ set(odb_src "")
 
 foreach(odb_file ${odb_files})
   string(REPLACE ".hxx" "-odb.hxx" odb_hxx ${odb_file})
-  string(REPLACE ".cxx" "-odb.cxx" odb_cxx ${odb_file})
+  string(REPLACE ".hxx" "-odb.cxx" odb_cxx ${odb_file})
 
   set(odb_hxx_path ${CMAKE_CURRENT_BINARY_DIR}/${odb_hxx})
   set(odb_cxx_path ${CMAKE_CURRENT_BINARY_DIR}/${odb_cxx})
@@ -69,6 +69,7 @@ add_executable(${src_target} ${proto_src} ${odb_src} ${src})
 add_executable(${test_target} ${proto_src} ${test_src})
 # 头文件搜索路径
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../odb)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../common)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../third/include)
 include_directories(/usr/local/include)
@@ -87,6 +88,13 @@ target_link_libraries(${src_target}
   -lcpprest
   -lcurl
   -ljsoncpp
+  -lodb
+  -lodb-mysql
+  -lodb-boost
+  -lelasticlient
+  -lhiredis
+  -lredis++
+  -lcpr
 )
 target_link_directories(${test_target} PRIVATE /usr/local/lib)
 target_link_libraries(${test_target}

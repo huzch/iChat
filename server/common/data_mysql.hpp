@@ -59,7 +59,7 @@ class UserTable {
       auto user =
           _mysql_client->query_one<User>(odb::query<User>::name == name);
       t.commit();
-      return std::make_shared<User>(user);
+      return std::shared_ptr<User>(user);
     } catch (const std::exception& e) {
       LOG_ERROR("昵称 {} 查询失败: {}", name, e.what());
       return nullptr;
@@ -72,7 +72,7 @@ class UserTable {
       auto user =
           _mysql_client->query_one<User>(odb::query<User>::phone == phone);
       t.commit();
-      return std::make_shared<User>(user);
+      return std::shared_ptr<User>(user);
     } catch (const std::exception& e) {
       LOG_ERROR("手机号 {} 查询失败: {}", phone, e.what());
       return nullptr;
@@ -85,7 +85,7 @@ class UserTable {
       auto user =
           _mysql_client->query_one<User>(odb::query<User>::user_id == user_id);
       t.commit();
-      return std::make_shared<User>(user);
+      return std::shared_ptr<User>(user);
     } catch (const std::exception& e) {
       LOG_ERROR("用户id {} 查询失败: {}", user_id, e.what());
       return nullptr;
