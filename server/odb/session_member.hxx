@@ -1,6 +1,5 @@
 #pragma once
 #include <odb/core.hxx>
-#include <odb/nullable.hxx>
 #include <string>
 
 namespace huzch {
@@ -8,6 +7,8 @@ namespace huzch {
 #pragma db object table("session_member")
 class SessionMember {
  public:
+  SessionMember() {}
+
   SessionMember(const std::string& session_id, const std::string& user_id)
       : _session_id(session_id), _user_id(user_id) {}
 
@@ -21,7 +22,7 @@ class SessionMember {
   friend class odb::access;
 #pragma db id auto
   unsigned long _id;
-#pragma db type("varchar(64)")
+#pragma db type("varchar(64)") index
   std::string _session_id;
 #pragma db type("varchar(64)")
   std::string _user_id;

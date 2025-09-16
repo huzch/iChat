@@ -27,6 +27,6 @@ message GetForwardTargetRsp {
     repeated string target_id_list = 5; //消息的转发目标列表
 }
 
-service MsgForwardService {
+service ForwardService {
     rpc GetForwardTarget(NewMessageReq) returns (GetForwardTargetRsp);
 }

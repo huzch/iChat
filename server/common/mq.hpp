@@ -11,6 +11,7 @@ namespace huzch {
 
 class MQClient {
  public:
+  using Ptr = std::shared_ptr<MQClient>;
   using MessageCallBack = std::function<void(const char*, uint64_t)>;
 
  public:
