@@ -34,7 +34,7 @@ message StringMessageInfo {
     string content = 1;//文字聊天内容
 }
 message ImageMessageInfo {
-    //图片文件id,客户端发送的时候不用设置，由transmit服务器进行设置后交给storage的时候设置
+    //图片文件id,客户端发送的时候不用设置，由forward服务器进行设置后交给storage的时候设置
     optional string file_id = 1;
     //图片数据，在ES中存储消息的时候只要id不要文件数据, 服务端转发的时候需要原样转发
     optional bytes image_content = 2;
