@@ -53,6 +53,7 @@ class ForwardServiceImpl : public ForwardService {
     brpc::Controller ctrl;
     huzch::GetUserInfoReq req;
     req.set_request_id(request_id);
+    req.set_user_id(user_id);
     huzch::GetUserInfoRsp rsp;
 
     stub.GetUserInfo(&ctrl, &req, &rsp, nullptr);

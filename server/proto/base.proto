@@ -54,7 +54,7 @@ message SpeechMessageInfo {
 }
 message MessageContent {
     MessageType message_type = 1; //消息类型
-    oneof msg_content {
+    oneof message_content {
         StringMessageInfo string_message = 2;//文字消息
         FileMessageInfo file_message = 3;//文件消息
         SpeechMessageInfo speech_message = 4;//语音消息

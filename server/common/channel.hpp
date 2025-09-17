@@ -91,7 +91,7 @@ class ServiceManager {
 
     std::unique_lock<std::mutex> lock(_mutex);
     if (!_services.count(service_name)) {
-      LOG_ERROR("{} 服务上线节点: {}，但并不关心", service_name, host);
+      LOG_DEBUG("{} 服务上线节点: {}，但并不关心", service_name, host);
       return;
     }
 

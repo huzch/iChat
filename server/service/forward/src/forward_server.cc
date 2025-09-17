@@ -15,7 +15,7 @@ DEFINE_string(forward_service_host, "127.0.0.1:10004", "转发服务实例访问
 
 DEFINE_string(mq_host, "127.0.0.1:5672", "rabbitmq服务器地址");
 DEFINE_string(mq_user, "root", "rabbitmq服务器用户名");
-DEFINE_string(mq_passwd, "123@HUzcxbcxzxb", "rabbitmq服务器密码");
+DEFINE_string(mq_passwd, "123HUzcxbcxzxb", "rabbitmq服务器密码");
 DEFINE_string(mq_exchange, "msg_exchange", "持久化消息发布交换机名");
 DEFINE_string(mq_queue, "msg_queue", "持久化消息发布队列名");
 
@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
   // 初始化服务注册
   fsb.init_registry_client(
       FLAGS_registry_host,
-      FLAGS_base_dir + FLAGS_user_service_name + FLAGS_instance_name,
+      FLAGS_base_dir + FLAGS_forward_service_name + FLAGS_instance_name,
       FLAGS_forward_service_host);
 
   // 初始化服务发现

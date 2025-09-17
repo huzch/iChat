@@ -1,7 +1,6 @@
 #pragma once
 #include <amqpcpp.h>
 #include <amqpcpp/libev.h>
-#include <ev.h>
 
 #include <thread>
 
@@ -21,7 +20,8 @@ class MQClient {
     _handler = std::make_unique<AMQP::LibEvHandler>(_loop);
 
     auto url = "amqp://" + user + ":" + passwd + "@" + host + "/";
-    _connection = std::make_unique<AMQP::TcpConnection>(_handler.get(), url);
+    AMQP::Address addr(url);
+    _connection = std::make_unique<AMQP::TcpConnection>(_handler.get(), addr);
     _channel = std::make_unique<AMQP::TcpChannel>(_connection.get());
 
     _loop_thread = std::thread([this]() { ev_run(_loop); });
@@ -41,21 +41,21 @@ class MQClient {
     _channel->declareExchange(exchange, exchange_type)
         .onError([](const std::string& err) {
           LOG_ERROR("交换机声明失败: {}", err);
-          abort();
+          exit(0);
         })
         .onSuccess([exchange]() { LOG_DEBUG("交换机 {} 声明成功", exchange); });
 
     _channel->declareQueue(queue)
         .onError([](const std::string& err) {
           LOG_ERROR("队列声明失败: {}", err);
-          abort();
+          exit(0);
         })
         .onSuccess([queue]() { LOG_DEBUG("队列 {} 声明成功", queue); });
 
     _channel->bindQueue(exchange, queue, routing_key)
         .onError([](const std::string& err) {
           LOG_ERROR("交换机-队列 绑定失败: {}", err);
-          abort();
+          exit(0);
         })
         .onSuccess([exchange, queue]() {
           LOG_DEBUG("交换机 {} - 队列 {} 绑定成功", exchange, queue);
@@ -73,7 +73,7 @@ class MQClient {
   }
 
   void consume(const std::string& queue, const MessageCallBack& cb,
-               const const std::string& tag = "consume_tag") {
+               const std::string& tag = "consume_tag") {
     _channel->consume(queue, tag)
         .onReceived(
             [this, cb](const AMQP::Message& msg, uint64_t deliveryTag, bool) {
@@ -82,7 +82,7 @@ class MQClient {
             })
         .onError([queue](const std::string& err) {
           LOG_ERROR("队列 {} 消息订阅失败: {}", queue, err);
-          abort();
+          exit(0);
         });
   }
 
@@ -99,4 +99,4 @@ class MQClient {
   std::thread _loop_thread;
 };
 
-}
+}  // namespace huzch

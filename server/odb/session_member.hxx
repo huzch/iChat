@@ -4,6 +4,7 @@
 
 namespace huzch {
 
+// 聊天会话成员
 #pragma db object table("session_member")
 class SessionMember {
  public:

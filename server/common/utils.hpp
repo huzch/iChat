@@ -91,7 +91,7 @@ bool serialize(const Json::Value& val, std::string& dst) {
   std::stringstream ss;
   int ret = sw->write(val, &ss);
   if (ret != 0) {
-    LOG_ERROR("Json序列化失败");
+    LOG_ERROR("json序列化失败");
     return false;
   }
 
@@ -106,7 +106,7 @@ bool unserialize(const std::string& src, Json::Value& val) {
   std::string err;
   bool ret = cr->parse(src.c_str(), src.c_str() + src.size(), &val, &err);
   if (ret == false) {
-    LOG_ERROR("Json反序列化失败: {}", err);
+    LOG_ERROR("json反序列化失败: {}", err);
     return false;
   }
 
