@@ -64,18 +64,18 @@ class ForwardServiceImpl : public ForwardService {
       return;
     }
 
-    MessageInfo msg_info;
-    msg_info.set_message_id(uuid());
-    msg_info.set_chat_session_id(chat_session_id);
-    msg_info.set_timestamp(time(nullptr));
-    msg_info.mutable_sender()->CopyFrom(rsp.user_info());
-    msg_info.mutable_message()->CopyFrom(content);
+    MessageInfo message_info;
+    message_info.set_message_id(uuid());
+    message_info.set_chat_session_id(chat_session_id);
+    message_info.set_timestamp(time(nullptr));
+    message_info.mutable_sender()->CopyFrom(rsp.user_info());
+    message_info.mutable_message()->CopyFrom(content);
 
     auto members = _mysql_session_member->members(chat_session_id);
 
     // 将封装好的消息信息发布到消息队列，等待消息服务进行消息持久化
     bool ret =
-        _mq_client->publish(_exchange_name, msg_info.SerializeAsString());
+        _mq_client->publish(_exchange_name, message_info.SerializeAsString());
     if (!ret) {
       LOG_ERROR("{} 持久化消息发布失败", request_id);
       err_rsp("持久化消息发布失败");
@@ -83,9 +83,9 @@ class ForwardServiceImpl : public ForwardService {
     }
 
     response->set_success(true);
-    response->mutable_message()->CopyFrom(msg_info);
+    response->mutable_message()->CopyFrom(message_info);
     for (auto& member : members) {
-      response->add_target_id_list(member.user_id());
+      response->add_targets_id(member.user_id());
     }
   }
 

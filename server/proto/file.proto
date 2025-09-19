@@ -21,13 +21,13 @@ message GetMultiFileReq {
     string request_id = 1;
     optional string user_id = 2;
     optional string session_id = 3;
-    repeated string file_id_list = 4;
+    repeated string files_id = 4;
 }
 message GetMultiFileRsp {
     string request_id = 1;
     bool success = 2;
     optional string errmsg = 3;
-    map<string, FileDownloadData> file_data = 4;//文件ID与文件数据的映射map
+    map<string, FileDownloadData> files_data = 4;//文件ID与文件数据的映射map
 }
 
 message PutSingleFileReq {
@@ -47,13 +47,13 @@ message PutMultiFileReq {
     string request_id = 1;
     optional string user_id = 2;
     optional string session_id = 3;
-    repeated FileUploadData file_data = 4;
+    repeated FileUploadData files_data = 4;
 }
 message PutMultiFileRsp {
     string request_id = 1;
     bool success = 2;
     optional string errmsg = 3; 
-    repeated FileMessageInfo file_info = 4;
+    repeated FileMessageInfo files_info = 4;
 }
 
 service FileService {

@@ -8,7 +8,7 @@ message GetHistoryMessageReq {
     string request_id = 1;
     string chat_session_id = 2;
     int64 start_time = 3;
-    int64 over_time = 4;
+    int64 end_time = 4;
     optional string user_id = 5;
     optional string session_id = 6;
 }
@@ -16,7 +16,7 @@ message GetHistoryMessageRsp {
     string request_id = 1;
     bool success = 2;
     string errmsg = 3; 
-    repeated MessageInfo msg_list = 4;
+    repeated MessageInfo messages = 4;
 }
 
 message GetRecentMessageReq {
@@ -31,7 +31,7 @@ message GetRecentMessageRsp {
     string request_id = 1;
     bool success = 2;
     string errmsg = 3; 
-    repeated MessageInfo msg_list = 4;
+    repeated MessageInfo messages = 4;
 }
 
 message MessageSearchReq {
@@ -45,7 +45,7 @@ message MessageSearchRsp {
     string request_id = 1;
     bool success = 2;
     string errmsg = 3; 
-    repeated MessageInfo msg_list = 4;
+    repeated MessageInfo messages = 4;
 }
 
 service MessageService {

@@ -77,7 +77,7 @@ class Message {
   std::string _session_id;
 #pragma db type("varchar(64)")
   std::string _user_id;
-  unsigned char _message_type;  // 0:string, 1:image, 2:speech, 3:file
+  unsigned char _message_type;  // 0:string, 1:speech, 2:image, 3:file
 #pragma db type("timestamp")
   boost::posix_time::ptime _create_time;
   odb::nullable<std::string> _content;  // string

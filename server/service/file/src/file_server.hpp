@@ -52,9 +52,9 @@ class FileServiceImpl : public FileService {
     std::string request_id = request->request_id();
     response->set_request_id(request_id);
 
-    for (size_t i = 0; i < request->file_id_list_size(); ++i) {
+    for (const auto& file_id : request->files_id()) {
       std::string body;
-      std::string file_name = _storage_path + request->file_id_list(i);
+      std::string file_name = _storage_path + file_id;
       bool ret = read_file(file_name, body);
       if (!ret) {
         LOG_ERROR("{} 文件读取失败", request_id);
@@ -64,9 +64,9 @@ class FileServiceImpl : public FileService {
       }
 
       FileDownloadData data;
-      data.set_file_id(request->file_id_list(i));
+      data.set_file_id(file_id);
       data.set_file_content(body);
-      response->mutable_file_data()->insert({request->file_id_list(i), data});
+      response->mutable_files_data()->insert({file_id, data});
     }
     response->set_success(true);
   }
@@ -104,10 +104,10 @@ class FileServiceImpl : public FileService {
     std::string request_id = request->request_id();
     response->set_request_id(request_id);
 
-    for (size_t i = 0; i < request->file_data_size(); ++i) {
+    for (const auto& file_data : request->files_data()) {
       std::string file_id = uuid();
       std::string file_name = _storage_path + file_id;
-      bool ret = write_file(file_name, request->file_data(i).file_content());
+      bool ret = write_file(file_name, file_data.file_content());
       if (!ret) {
         LOG_ERROR("{} 文件写入失败", request_id);
         response->set_success(false);
@@ -115,10 +115,10 @@ class FileServiceImpl : public FileService {
         return;
       }
 
-      auto info = response->add_file_info();
-      info->set_file_id(file_id);
-      info->set_file_size(request->file_data(i).file_size());
-      info->set_file_name(request->file_data(i).file_name());
+      auto file_info = response->add_files_info();
+      file_info->set_file_id(file_id);
+      file_info->set_file_size(file_data.file_size());
+      file_info->set_file_name(file_data.file_name());
     }
     response->set_success(true);
   }

@@ -70,12 +70,12 @@ TEST(put_test, multi_file) {
   huzch::PutMultiFileReq req;
   req.set_request_id("333");
 
-  auto file_data1 = req.add_file_data();
+  auto file_data1 = req.add_files_data();
   file_data1->set_file_name("_base.pb.h");
   file_data1->set_file_size(body1.size());
   file_data1->set_file_content(body1);
 
-  auto file_data2 = req.add_file_data();
+  auto file_data2 = req.add_files_data();
   file_data2->set_file_name("_file.pb.h");
   file_data2->set_file_size(body2.size());
   file_data2->set_file_content(body2);
@@ -85,8 +85,8 @@ TEST(put_test, multi_file) {
 
   ASSERT_FALSE(ctrl.Failed());
   ASSERT_TRUE(rsp.success());
-  for (size_t i = 0; i < rsp.file_info_size(); ++i) {
-    multi_file_id.push_back(rsp.file_info(i).file_id());
+  for (const auto& file_info : rsp.files_info()) {
+    multi_file_id.push_back(file_info.file_id());
   }
 }
 
@@ -96,19 +96,19 @@ TEST(get_test, multi_file) {
   brpc::Controller ctrl;
   huzch::GetMultiFileReq req;
   req.set_request_id("444");
-  for (size_t i = 0; i < multi_file_id.size(); ++i) {
-    req.add_file_id_list(multi_file_id[i]);
+  for (const auto& file_id : multi_file_id) {
+    req.add_files_id(file_id);
   }
   huzch::GetMultiFileRsp rsp;
   stub.GetMultiFile(&ctrl, &req, &rsp, nullptr);
 
   ASSERT_FALSE(ctrl.Failed());
   ASSERT_TRUE(rsp.success());
-  for (size_t i = 0; i < multi_file_id.size(); ++i) {
-    ASSERT_TRUE(rsp.file_data().count(multi_file_id[i]));
+  for (const auto& file_id : multi_file_id) {
+    ASSERT_TRUE(rsp.files_data().count(file_id));
   }
   // 写入文件
-  auto map = rsp.file_data();
+  auto map = rsp.files_data();
   huzch::write_file("_base.pb.h", map[multi_file_id[0]].file_content());
   huzch::write_file("_file.pb.h", map[multi_file_id[1]].file_content());
 }

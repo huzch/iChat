@@ -383,7 +383,7 @@ class UserServiceImpl : public UserService {
     req.set_request_id(request_id);
     for (auto& user : users) {
       if (!user.avatar_id().empty()) {
-        req.add_file_id_list(user.avatar_id());
+        req.add_files_id(user.avatar_id());
       }
     }
     huzch::GetMultiFileRsp rsp;
@@ -396,7 +396,7 @@ class UserServiceImpl : public UserService {
       return;
     }
 
-    auto map = rsp.file_data();
+    auto map = rsp.files_data();
     for (auto& user : users) {
       UserInfo user_info;
       user_info.set_user_id(user.user_id());

@@ -24,7 +24,7 @@ message GetForwardTargetRsp {
     bool success = 2;
     string errmsg = 3; 
     MessageInfo message = 4; // 组织好的消息结构
-    repeated string target_id_list = 5; //消息的转发目标列表
+    repeated string targets_id = 5; //消息的转发目标列表
 }
 
 service ForwardService {
