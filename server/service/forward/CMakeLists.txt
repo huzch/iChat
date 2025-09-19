@@ -33,7 +33,7 @@ foreach(proto_file ${proto_files})
 endforeach()
 
 set(odb_path ${CMAKE_CURRENT_SOURCE_DIR}/../../odb)
-set(odb_files user.hxx session_member.hxx)
+set(odb_files session_member.hxx)
 set(odb_hxx "")
 set(odb_cxx "")
 set(odb_src "")

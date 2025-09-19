@@ -3,7 +3,7 @@
 
 #include "base.pb.h"
 #include "channel.hpp"
-#include "data_mysql.hpp"
+#include "data_mysql_user.hpp"
 #include "data_redis.hpp"
 #include "data_search.hpp"
 #include "etcd.hpp"
