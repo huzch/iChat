@@ -26,8 +26,8 @@ class ESIndex {
     _index["settings"] = analysis;
   }
 
-  ESIndex& append(const std::string& key, bool enabled = true,
-                  const std::string& type = "text",
+  ESIndex& append(const std::string& key, const std::string& type = "text",
+                  bool enabled = true,
                   const std::string& analyzer = "ik_max_word") {
     Json::Value fields;
     fields["type"] = type;
@@ -83,7 +83,8 @@ class ESInsert {
            const std::string& name, const std::string& type = "_doc")
       : _client(client), _name(name), _type(type) {}
 
-  ESInsert& append(const std::string& key, const std::string& val) {
+  template <class T>
+  ESInsert& append(const std::string& key, const T& val) {
     _item[key] = val;
     return *this;
   }
@@ -149,8 +150,28 @@ class ESSearch {
            const std::string& name, const std::string& type = "_doc")
       : _client(client), _name(name), _type(type) {}
 
-  ESSearch& append_must_not(const std::string& key,
-                            const std::vector<std::string>& vals) {
+  ESSearch& append_must_term(const std::string& key, const std::string& val) {
+    Json::Value fields;
+    fields[key] = val;
+
+    Json::Value term;
+    term["term"] = fields;
+    _must.append(term);
+    return *this;
+  }
+
+  ESSearch& append_must_match(const std::string& key, const std::string& val) {
+    Json::Value fields;
+    fields[key] = val;
+
+    Json::Value match;
+    match["match"] = fields;
+    _must.append(match);
+    return *this;
+  }
+
+  ESSearch& append_must_not_terms(const std::string& key,
+                                  const std::vector<std::string>& vals) {
     Json::Value fields;
     for (auto& val : vals) {
       fields[key].append(val);
@@ -162,7 +183,8 @@ class ESSearch {
     return *this;
   }
 
-  ESSearch& append_should(const std::string& key, const std::string& val) {
+  ESSearch& append_should_match(const std::string& key,
+                                const std::string& val) {
     Json::Value fields;
     fields[key] = val;
 
@@ -174,6 +196,9 @@ class ESSearch {
 
   Json::Value search() {
     Json::Value cond;
+    if (!_must.empty()) {
+      cond["must"] = _must;
+    }
     if (!_must_not.empty()) {
       cond["must_not"] = _must_not;
     }
@@ -220,6 +245,7 @@ class ESSearch {
   std::shared_ptr<elasticlient::Client> _client;
   std::string _name;
   std::string _type;
+  Json::Value _must;
   Json::Value _must_not;
   Json::Value _should;
 };
