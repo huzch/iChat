@@ -112,3 +112,5 @@ target_link_libraries(${test_target}
   -lcurl
   -ljsoncpp
 )
+# 安装路径
+INSTALL(TARGETS ${src_target} ${test_target} RUNTIME DESTINATION bin)

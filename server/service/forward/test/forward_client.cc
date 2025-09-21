@@ -18,6 +18,7 @@ huzch::ServiceChannel::ChannelPtr channel;
 std::string user_id;
 std::string chat_session_id;
 std::string content;
+std::string file_name;
 
 TEST(forward_test, string_message) {
   huzch::ForwardService_Stub stub(channel.get());
@@ -31,10 +32,59 @@ TEST(forward_test, string_message) {
   huzch::GetForwardTargetRsp rsp;
 
   stub.GetForwardTarget(&ctrl, &req, &rsp, nullptr);
-  huzch::LOG_DEBUG("message_info: {}", rsp.message().SerializeAsString());
   ASSERT_FALSE(ctrl.Failed());
   ASSERT_TRUE(rsp.success());
 }
+
+// TEST(forward_test, speech_message) {
+//   huzch::ForwardService_Stub stub(channel.get());
+//   brpc::Controller ctrl;
+//   huzch::NewMessageReq req;
+//   req.set_request_id(huzch::uuid());
+//   req.set_user_id(user_id);
+//   req.set_chat_session_id(chat_session_id);
+//   req.mutable_message()->set_message_type(huzch::MessageType::SPEECH);
+//   req.mutable_message()->mutable_speech_message()->set_file_content(content);
+//   huzch::GetForwardTargetRsp rsp;
+
+//   stub.GetForwardTarget(&ctrl, &req, &rsp, nullptr);
+//   ASSERT_FALSE(ctrl.Failed());
+//   ASSERT_TRUE(rsp.success());
+// }
+
+// TEST(forward_test, image_message) {
+//   huzch::ForwardService_Stub stub(channel.get());
+//   brpc::Controller ctrl;
+//   huzch::NewMessageReq req;
+//   req.set_request_id(huzch::uuid());
+//   req.set_user_id(user_id);
+//   req.set_chat_session_id(chat_session_id);
+//   req.mutable_message()->set_message_type(huzch::MessageType::IMAGE);
+//   req.mutable_message()->mutable_image_message()->set_file_content(content);
+//   huzch::GetForwardTargetRsp rsp;
+
+//   stub.GetForwardTarget(&ctrl, &req, &rsp, nullptr);
+//   ASSERT_FALSE(ctrl.Failed());
+//   ASSERT_TRUE(rsp.success());
+// }
+
+// TEST(forward_test, file_message) {
+//   huzch::ForwardService_Stub stub(channel.get());
+//   brpc::Controller ctrl;
+//   huzch::NewMessageReq req;
+//   req.set_request_id(huzch::uuid());
+//   req.set_user_id(user_id);
+//   req.set_chat_session_id(chat_session_id);
+//   req.mutable_message()->set_message_type(huzch::MessageType::FILE);
+//   req.mutable_message()->mutable_file_message()->set_file_name(file_name);
+//   req.mutable_message()->mutable_file_message()->set_file_size(content.size());
+//   req.mutable_message()->mutable_file_message()->set_file_content(content);
+//   huzch::GetForwardTargetRsp rsp;
+
+//   stub.GetForwardTarget(&ctrl, &req, &rsp, nullptr);
+//   ASSERT_FALSE(ctrl.Failed());
+//   ASSERT_TRUE(rsp.success());
+// }
 
 int main(int argc, char* argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
@@ -63,7 +113,8 @@ int main(int argc, char* argv[]) {
 
   user_id = "1fe9a0b8d11a0000";
   chat_session_id = "s1";
-  content = "hello, are you ok?";
+  content = "你好在吗？";
+  file_name = "";
 
   return RUN_ALL_TESTS();
 }

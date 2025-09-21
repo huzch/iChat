@@ -42,8 +42,10 @@ class MessageServiceImpl : public MessageService {
       response->set_errmsg(errmsg);
     };
     std::string chat_session_id = request->chat_session_id();
-    boost::posix_time::ptime start_time = request->start_time();
-    boost::posix_time::ptime end_time = request->end_time();
+    boost::posix_time::ptime start_time =
+        boost::posix_time::from_time_t(request->start_time());
+    boost::posix_time::ptime end_time =
+        boost::posix_time::from_time_t(request->end_time());
 
     auto messages =
         _mysql_message->range(chat_session_id, start_time, end_time);
@@ -76,42 +78,48 @@ class MessageServiceImpl : public MessageService {
 
     for (auto& message : messages) {
       auto message_info = response->add_messages();
-      message_info.set_message_id(message.message_id());
-      message_info.set_chat_session_id(message.session_id());
-      message_info.set_timestamp(
+      message_info->set_message_id(message.message_id());
+      message_info->set_chat_session_id(message.session_id());
+      message_info->set_timestamp(
           boost::posix_time::to_time_t(message.create_time()));
-      message_info.mutable_sender()->CopyFrom(users_info[message.user_id()]);
+      message_info->mutable_sender()->CopyFrom(users_info[message.user_id()]);
       switch (message.message_type()) {
         case MessageType::STRING:
-          message_info.mutable_message()->set_message_type(MessageType::STRING);
-          message_info.mutable_message()->mutable_string_message()->set_content(
-              message.content());
+          message_info->mutable_message()->set_message_type(
+              MessageType::STRING);
+          message_info->mutable_message()
+              ->mutable_string_message()
+              ->set_content(message.content());
           break;
         case MessageType::SPEECH:
-          message_info.mutable_message()->set_message_type(MessageType::SPEECH);
-          message_info.mutable_message()->mutable_speech_message()->set_file_id(
-              message.file_id());
-          message_info.mutable_message()
+          message_info->mutable_message()->set_message_type(
+              MessageType::SPEECH);
+          message_info->mutable_message()
+              ->mutable_speech_message()
+              ->set_file_id(message.file_id());
+          message_info->mutable_message()
               ->mutable_speech_message()
               ->set_file_content(files_data[message.file_id()]);
           break;
         case MessageType::IMAGE:
-          message_info.mutable_message()->set_message_type(MessageType::IMAGE);
-          message_info.mutable_message()->mutable_image_message()->set_file_id(
+          message_info->mutable_message()->set_message_type(MessageType::IMAGE);
+          message_info->mutable_message()->mutable_image_message()->set_file_id(
               message.file_id());
-          message_info.mutable_message()
+          message_info->mutable_message()
               ->mutable_image_message()
               ->set_file_content(files_data[message.file_id()]);
           break;
         case MessageType::FILE:
-          message_info.mutable_message()->set_message_type(MessageType::FILE);
-          message_info.mutable_message()->mutable_file_message()->set_file_id(
+          message_info->mutable_message()->set_message_type(MessageType::FILE);
+          message_info->mutable_message()->mutable_file_message()->set_file_id(
               message.file_id());
-          message_info.mutable_message()->mutable_file_message()->set_file_size(
-              message.file_size());
-          message_info.mutable_message()->mutable_file_message()->set_file_name(
-              message.file_name());
-          message_info.mutable_message()
+          message_info->mutable_message()
+              ->mutable_file_message()
+              ->set_file_size(message.file_size());
+          message_info->mutable_message()
+              ->mutable_file_message()
+              ->set_file_name(message.file_name());
+          message_info->mutable_message()
               ->mutable_file_message()
               ->set_file_content(files_data[message.file_id()]);
           break;
@@ -168,42 +176,48 @@ class MessageServiceImpl : public MessageService {
 
     for (auto& message : messages) {
       auto message_info = response->add_messages();
-      message_info.set_message_id(message.message_id());
-      message_info.set_chat_session_id(message.session_id());
-      message_info.set_timestamp(
+      message_info->set_message_id(message.message_id());
+      message_info->set_chat_session_id(message.session_id());
+      message_info->set_timestamp(
           boost::posix_time::to_time_t(message.create_time()));
-      message_info.mutable_sender()->CopyFrom(users_info[message.user_id()]);
+      message_info->mutable_sender()->CopyFrom(users_info[message.user_id()]);
       switch (message.message_type()) {
         case MessageType::STRING:
-          message_info.mutable_message()->set_message_type(MessageType::STRING);
-          message_info.mutable_message()->mutable_string_message()->set_content(
-              message.content());
+          message_info->mutable_message()->set_message_type(
+              MessageType::STRING);
+          message_info->mutable_message()
+              ->mutable_string_message()
+              ->set_content(message.content());
           break;
         case MessageType::SPEECH:
-          message_info.mutable_message()->set_message_type(MessageType::SPEECH);
-          message_info.mutable_message()->mutable_speech_message()->set_file_id(
-              message.file_id());
-          message_info.mutable_message()
+          message_info->mutable_message()->set_message_type(
+              MessageType::SPEECH);
+          message_info->mutable_message()
+              ->mutable_speech_message()
+              ->set_file_id(message.file_id());
+          message_info->mutable_message()
               ->mutable_speech_message()
               ->set_file_content(files_data[message.file_id()]);
           break;
         case MessageType::IMAGE:
-          message_info.mutable_message()->set_message_type(MessageType::IMAGE);
-          message_info.mutable_message()->mutable_image_message()->set_file_id(
+          message_info->mutable_message()->set_message_type(MessageType::IMAGE);
+          message_info->mutable_message()->mutable_image_message()->set_file_id(
               message.file_id());
-          message_info.mutable_message()
+          message_info->mutable_message()
               ->mutable_image_message()
               ->set_file_content(files_data[message.file_id()]);
           break;
         case MessageType::FILE:
-          message_info.mutable_message()->set_message_type(MessageType::FILE);
-          message_info.mutable_message()->mutable_file_message()->set_file_id(
+          message_info->mutable_message()->set_message_type(MessageType::FILE);
+          message_info->mutable_message()->mutable_file_message()->set_file_id(
               message.file_id());
-          message_info.mutable_message()->mutable_file_message()->set_file_size(
-              message.file_size());
-          message_info.mutable_message()->mutable_file_message()->set_file_name(
-              message.file_name());
-          message_info.mutable_message()
+          message_info->mutable_message()
+              ->mutable_file_message()
+              ->set_file_size(message.file_size());
+          message_info->mutable_message()
+              ->mutable_file_message()
+              ->set_file_name(message.file_name());
+          message_info->mutable_message()
               ->mutable_file_message()
               ->set_file_content(files_data[message.file_id()]);
           break;
@@ -246,16 +260,16 @@ class MessageServiceImpl : public MessageService {
 
     for (auto& message : messages) {
       auto message_info = response->add_messages();
-      message_info.set_message_id(message.message_id());
-      message_info.set_chat_session_id(message.session_id());
-      message_info.set_timestamp(
+      message_info->set_message_id(message.message_id());
+      message_info->set_chat_session_id(message.session_id());
+      message_info->set_timestamp(
           boost::posix_time::to_time_t(message.create_time()));
-      message_info.mutable_sender()->CopyFrom(users_info[message.user_id()]);
-      message_info.mutable_message()->set_message_type(MessageType::STRING);
-      message_info.mutable_message()->mutable_string_message()->set_content(
+      message_info->mutable_sender()->CopyFrom(users_info[message.user_id()]);
+      message_info->mutable_message()->set_message_type(MessageType::STRING);
+      message_info->mutable_message()->mutable_string_message()->set_content(
           message.content());
     }
-    request->set_success(true);
+    response->set_success(true);
   }
 
   void on_message(const char* body, uint64_t body_size) {

@@ -89,6 +89,7 @@ class UserTable {
       }
       condition.pop_back();
       condition += ")";
+      LOG_DEBUG("condition: {}", condition);
 
       auto result = _mysql_client->query<User>(condition);
       users.reserve(result.size());

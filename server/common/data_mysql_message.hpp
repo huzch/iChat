@@ -53,6 +53,7 @@ class MessageTable {
       for (const auto& message : result) {
         messages.push_back(message);
       }
+      std::reverse(messages.begin(), messages.end());
       t.commit();
     } catch (const std::exception& e) {
       LOG_ERROR("会话 {} 获取最近 {} 条消息失败: {}", session_id, count,

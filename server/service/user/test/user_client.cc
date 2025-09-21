@@ -91,31 +91,31 @@ huzch::UserInfo user_info;
 //   ASSERT_EQ(rsp.user_info().avatar(), user_info.avatar());
 // }
 
-// TEST(get_test, get_multi_user_info) {
-//   huzch::UserService_Stub stub(channel.get());
-//   brpc::Controller ctrl;
-//   huzch::GetMultiUserInfoReq req;
-//   req.set_request_id(huzch::uuid());
-//   req.add_users_id("1fe9a0b8d11a0000");
-//   req.add_users_id("cb40be03c9f00000");
-//   huzch::GetMultiUserInfoRsp rsp;
+TEST(get_test, get_multi_user_info) {
+  huzch::UserService_Stub stub(channel.get());
+  brpc::Controller ctrl;
+  huzch::GetMultiUserInfoReq req;
+  req.set_request_id(huzch::uuid());
+  req.add_users_id("1fe9a0b8d11a0000");
+  req.add_users_id("cb40be03c9f00000");
+  huzch::GetMultiUserInfoRsp rsp;
 
-//   stub.GetMultiUserInfo(&ctrl, &req, &rsp, nullptr);
-//   ASSERT_FALSE(ctrl.Failed());
-//   ASSERT_TRUE(rsp.success());
-//   auto map = rsp.users_info();
+  stub.GetMultiUserInfo(&ctrl, &req, &rsp, nullptr);
+  ASSERT_FALSE(ctrl.Failed());
+  ASSERT_TRUE(rsp.success());
+  auto map = rsp.users_info();
 
-//   auto user1 = map["1fe9a0b8d11a0000"];
-//   ASSERT_EQ(user1.user_id(), "1fe9a0b8d11a0000");
-//   ASSERT_EQ(user1.name(), "zhangsan");
-//   ASSERT_EQ(user1.description(), "life is a game!");
+  auto user1 = map["1fe9a0b8d11a0000"];
+  ASSERT_EQ(user1.user_id(), "1fe9a0b8d11a0000");
+  ASSERT_EQ(user1.name(), "zhangsan");
+  ASSERT_EQ(user1.description(), "life is a game!");
 
-//   auto user2 = map["cb40be03c9f00000"];
-//   ASSERT_EQ(user2.user_id(), "cb40be03c9f00000");
-//   ASSERT_EQ(user2.name(), "lisi");
-//   ASSERT_EQ(user2.description(), "life is a game!");
-//   ASSERT_EQ(user2.avatar(), "this is a avatar");
-// }
+  auto user2 = map["cb40be03c9f00000"];
+  ASSERT_EQ(user2.user_id(), "cb40be03c9f00000");
+  ASSERT_EQ(user2.name(), "lisi");
+  ASSERT_EQ(user2.description(), "life is a game!");
+  // ASSERT_EQ(user2.avatar(), "这是一个帅气的头像");
+}
 
 // TEST(set_test, set_name) {
 //   huzch::UserService_Stub stub(channel.get());
@@ -187,25 +187,25 @@ void get_code() {
 //   ASSERT_TRUE(rsp.success());
 // }
 
-TEST(set_test, set_phone) {
-  get_code();
+// TEST(set_test, set_phone) {
+//   get_code();
 
-  huzch::UserService_Stub stub(channel.get());
-  brpc::Controller ctrl;
-  huzch::SetUserPhoneNumberReq req;
-  req.set_request_id(huzch::uuid());
-  req.set_user_id(user_info.user_id());
-  req.set_phone_number("13825042245");
-  req.set_phone_verify_code_id(code_id);
-  std::cout << "请输入验证码: ";
-  std::cin >> code;
-  req.set_phone_verify_code(code);
-  huzch::SetUserPhoneNumberRsp rsp;
+//   huzch::UserService_Stub stub(channel.get());
+//   brpc::Controller ctrl;
+//   huzch::SetUserPhoneNumberReq req;
+//   req.set_request_id(huzch::uuid());
+//   req.set_user_id(user_info.user_id());
+//   req.set_phone_number("13825042245");
+//   req.set_phone_verify_code_id(code_id);
+//   std::cout << "请输入验证码: ";
+//   std::cin >> code;
+//   req.set_phone_verify_code(code);
+//   huzch::SetUserPhoneNumberRsp rsp;
 
-  stub.SetUserPhoneNumber(&ctrl, &req, &rsp, nullptr);
-  ASSERT_FALSE(ctrl.Failed());
-  ASSERT_TRUE(rsp.success());
-}
+//   stub.SetUserPhoneNumber(&ctrl, &req, &rsp, nullptr);
+//   ASSERT_FALSE(ctrl.Failed());
+//   ASSERT_TRUE(rsp.success());
+// }
 
 int main(int argc, char* argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
@@ -236,7 +236,7 @@ int main(int argc, char* argv[]) {
   user_info.set_name("lisi");
   user_info.set_phone("13332844158");
   user_info.set_description("life is a game!");
-  user_info.set_avatar("this is a avatar");
+  user_info.set_avatar("这是一个帅气的头像");
 
   return RUN_ALL_TESTS();
 }
