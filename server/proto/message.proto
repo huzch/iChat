@@ -15,23 +15,23 @@ message GetHistoryMessageReq {
 message GetHistoryMessageRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
-    repeated MessageInfo messages = 4;
+    optional string errmsg = 3; 
+    repeated MessageInfo messages_info = 4;
 }
 
 message GetRecentMessageReq {
     string request_id = 1;
     string chat_session_id = 2;
     int64 msg_count = 3;
-    optional int64 cur_time = 4;//用于扩展获取指定时间前的n条消息
+    optional int64 cur_time = 4; // 用于扩展获取指定时间前的n条消息
     optional string user_id = 5;
     optional string login_session_id = 6;
 }
 message GetRecentMessageRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
-    repeated MessageInfo messages = 4;
+    optional string errmsg = 3; 
+    repeated MessageInfo messages_info = 4;
 }
 
 message MessageSearchReq {
@@ -44,8 +44,8 @@ message MessageSearchReq {
 message MessageSearchRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
-    repeated MessageInfo messages = 4;
+    optional string errmsg = 3; 
+    repeated MessageInfo messages_info = 4;
 }
 
 service MessageService {

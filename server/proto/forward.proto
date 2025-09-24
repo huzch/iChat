@@ -14,13 +14,13 @@ message NewMessageReq {
 message NewMessageRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
+    optional string errmsg = 3; 
 }
 
 message GetForwardTargetRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
+    optional string errmsg = 3; 
     MessageInfo message = 4;
     repeated string targets_id = 5;
 }

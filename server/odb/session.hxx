@@ -14,8 +14,11 @@ class Session {
  public:
   Session() {}
 
-  Session(const std::string& session_id, const std::string& session_name)
-      : _session_id(session_id), _session_name(session_name) {}
+  Session(const std::string& session_id, const std::string& session_name,
+          const SessionType& session_type)
+      : _session_id(session_id),
+        _session_name(session_name),
+        _session_type(session_type) {}
 
   void session_id(const std::string& val) { _session_id = val; }
   std::string session_id() const { return _session_id; }

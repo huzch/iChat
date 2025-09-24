@@ -113,8 +113,8 @@ class UserServiceImpl : public UserService {
       return;
     }
 
-    std::string session_id = uuid();
-    ret = _redis_session->insert(session_id, user->user_id());
+    std::string login_session_id = uuid();
+    ret = _redis_session->insert(login_session_id, user->user_id());
     if (!ret) {
       LOG_ERROR("{} redis新增用户会话失败", request_id);
       err_rsp("redis新增用户会话失败");
@@ -129,7 +129,7 @@ class UserServiceImpl : public UserService {
     }
 
     response->set_success(true);
-    response->set_login_session_id(session_id);
+    response->set_login_session_id(login_session_id);
   }
 
   void GetPhoneVerifyCode(google::protobuf::RpcController* controller,
@@ -271,8 +271,8 @@ class UserServiceImpl : public UserService {
       return;
     }
 
-    std::string session_id = uuid();
-    ret = _redis_session->insert(session_id, user->user_id());
+    std::string login_session_id = uuid();
+    ret = _redis_session->insert(login_session_id, user->user_id());
     if (!ret) {
       LOG_ERROR("{} redis新增用户会话失败", request_id);
       err_rsp("redis新增用户会话失败");
@@ -287,7 +287,7 @@ class UserServiceImpl : public UserService {
     }
 
     response->set_success(true);
-    response->set_login_session_id(session_id);
+    response->set_login_session_id(login_session_id);
   }
 
   void GetUserInfo(google::protobuf::RpcController* controller,
@@ -331,8 +331,8 @@ class UserServiceImpl : public UserService {
 
       stub.GetSingleFile(&ctrl, &req, &rsp, nullptr);
       if (ctrl.Failed() || !rsp.success()) {
-        LOG_ERROR("{} {} 服务调用失败: {}", request_id, _file_service_name,
-                  ctrl.ErrorText());
+        LOG_ERROR("{} {} 服务调用失败: {} {}", request_id, _file_service_name,
+                  ctrl.ErrorText(), rsp.errmsg());
         err_rsp("服务调用失败");
         return;
       }
@@ -370,33 +370,20 @@ class UserServiceImpl : public UserService {
       return;
     }
 
-    auto channel = _service_manager->get(_file_service_name);
-    if (!channel) {
-      LOG_ERROR("{} 未找到 {} 服务节点", request_id, _file_service_name);
-      err_rsp("未找到服务节点");
-      return;
-    }
-
-    huzch::FileService_Stub stub(channel.get());
-    brpc::Controller ctrl;
-    huzch::GetMultiFileReq req;
-    req.set_request_id(request_id);
+    std::unordered_set<std::string> files_id;
     for (auto& user : users) {
       if (!user.avatar_id().empty()) {
-        req.add_files_id(user.avatar_id());
+        files_id.insert(user.avatar_id());
       }
     }
-    huzch::GetMultiFileRsp rsp;
-
-    stub.GetMultiFile(&ctrl, &req, &rsp, nullptr);
-    if (ctrl.Failed() || !rsp.success()) {
-      LOG_ERROR("{} {} 服务调用失败: {}", request_id, _file_service_name,
-                ctrl.ErrorText());
-      err_rsp("服务调用失败");
+    std::unordered_map<std::string, std::string> files_data;
+    bool ret = get_file(request_id, files_id, files_data);
+    if (!ret) {
+      LOG_ERROR("{} 批量下载文件失败", request_id);
+      err_rsp("批量下载文件失败");
       return;
     }
 
-    auto map = rsp.files_data();
     for (auto& user : users) {
       UserInfo user_info;
       user_info.set_user_id(user.user_id());
@@ -404,9 +391,54 @@ class UserServiceImpl : public UserService {
       user_info.set_phone(user.phone());
       user_info.set_description(user.description());
       if (!user.avatar_id().empty()) {
-        user_info.set_avatar(map[user.avatar_id()].file_content());
+        user_info.set_avatar(files_data[user.avatar_id()]);
       }
       response->mutable_users_info()->insert({user.user_id(), user_info});
+    }
+    response->set_success(true);
+  }
+
+  void UserSearch(google::protobuf::RpcController* controller,
+                  const UserSearchReq* request, UserSearchRsp* response,
+                  google::protobuf::Closure* done) {
+    brpc::ClosureGuard rpc_guard(done);
+    std::string request_id = request->request_id();
+    response->set_request_id(request_id);
+
+    auto err_rsp = [response](const std::string& errmsg) {
+      response->set_success(false);
+      response->set_errmsg(errmsg);
+    };
+    std::string search_key = request->search_key();
+    std::string user_id = request->user_id();
+
+    std::vector<std::string> users_id;
+    users_id.push_back(user_id);
+    auto users = _es_user->search(search_key, users_id);
+
+    std::unordered_set<std::string> files_id;
+    for (auto& user : users) {
+      if (!user.avatar_id().empty()) {
+        files_id.insert(user.avatar_id());
+      }
+    }
+    std::unordered_map<std::string, std::string> files_data;
+    bool ret = get_file(request_id, files_id, files_data);
+    if (!ret) {
+      LOG_ERROR("{} 批量下载文件失败", request_id);
+      err_rsp("批量下载文件失败");
+      return;
+    }
+
+    for (auto& user : users) {
+      auto user_info = response->add_users_info();
+      user_info->set_user_id(user.user_id());
+      user_info->set_name(user.name());
+      user_info->set_phone(user.phone());
+      user_info->set_description(user.description());
+      if (!user.avatar_id().empty()) {
+        user_info->set_avatar(files_data[user.avatar_id()]);
+      }
     }
     response->set_success(true);
   }
@@ -450,8 +482,8 @@ class UserServiceImpl : public UserService {
 
     stub.PutSingleFile(&ctrl, &req, &rsp, nullptr);
     if (ctrl.Failed() || !rsp.success()) {
-      LOG_ERROR("{} {} 服务调用失败: {}", request_id, _file_service_name,
-                ctrl.ErrorText());
+      LOG_ERROR("{} {} 服务调用失败: {} {}", request_id, _file_service_name,
+                ctrl.ErrorText(), rsp.errmsg());
       err_rsp("服务调用失败");
       return;
     }
@@ -622,6 +654,37 @@ class UserServiceImpl : public UserService {
   }
 
  private:
+  bool get_file(const std::string& request_id,
+                const std::unordered_set<std::string> files_id,
+                std::unordered_map<std::string, std::string>& files_data) {
+    auto channel = _service_manager->get(_file_service_name);
+    if (!channel) {
+      LOG_ERROR("{} 未找到 {} 服务节点", request_id, _file_service_name);
+      return false;
+    }
+
+    huzch::FileService_Stub stub(channel.get());
+    brpc::Controller ctrl;
+    huzch::GetMultiFileReq req;
+    req.set_request_id(request_id);
+    for (const auto& file_id : files_id) {
+      req.add_files_id(file_id);
+    }
+    huzch::GetMultiFileRsp rsp;
+
+    stub.GetMultiFile(&ctrl, &req, &rsp, nullptr);
+    if (ctrl.Failed() || !rsp.success()) {
+      LOG_ERROR("{} {} 服务调用失败: {} {}", request_id, _file_service_name,
+                ctrl.ErrorText(), rsp.errmsg());
+      return false;
+    }
+
+    for (const auto& [key, val] : rsp.files_data()) {
+      files_data[key] = val.file_content();
+    }
+    return true;
+  }
+
   bool check_name(const std::string& name) { return name.size() <= 21; }
 
   bool check_password(const std::string& password) {

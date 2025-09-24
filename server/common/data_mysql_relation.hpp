@@ -17,8 +17,10 @@ class RelationTable {
   bool insert(const std::string& user_id, const std::string& peer_id) {
     try {
       odb::transaction t(_mysql_client->begin());
-      _mysql_client->persist(Relation(user_id, peer_id));
-      _mysql_client->persist(Relation(peer_id, user_id));
+      Relation r1(user_id, peer_id);
+      Relation r2(peer_id, user_id);
+      _mysql_client->persist(r1);
+      _mysql_client->persist(r2);
       t.commit();
     } catch (const std::exception& e) {
       LOG_ERROR("好友关系 {}-{} 新增失败: {}", user_id, peer_id, e.what());
@@ -58,22 +60,22 @@ class RelationTable {
     }
   }
 
-  std::vector<std::string> friends(const std::string& user_id) {
-    std::vector<std::string> friends;
+  std::vector<std::string> friends_id(const std::string& user_id) {
+    std::vector<std::string> friends_id;
     try {
       odb::transaction t(_mysql_client->begin());
       auto result = _mysql_client->query<Relation>(
           odb::query<Relation>::user_id == user_id);
-      friends.reserve(result.size());
-      for (const auto& friend : result) {
-        friends.push_back(friend.peer_id());
+      friends_id.reserve(result.size());
+      for (const auto& relation : result) {
+        friends_id.push_back(relation.peer_id());
       }
       t.commit();
     } catch (const std::exception& e) {
       LOG_ERROR("用户 {} 获取所有好友id失败: {}", user_id, e.what());
-      return friends;
+      return friends_id;
     }
-    return friends;
+    return friends_id;
   }
 
  private:

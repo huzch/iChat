@@ -58,8 +58,8 @@ class ForwardServiceImpl : public ForwardService {
 
     stub.GetUserInfo(&ctrl, &req, &rsp, nullptr);
     if (ctrl.Failed() || !rsp.success()) {
-      LOG_ERROR("{} {} 服务调用失败: {}", request_id, _user_service_name,
-                ctrl.ErrorText());
+      LOG_ERROR("{} {} 服务调用失败: {} {}", request_id, _user_service_name,
+                ctrl.ErrorText(), rsp.errmsg());
       err_rsp("服务调用失败");
       return;
     }

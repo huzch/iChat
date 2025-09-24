@@ -26,15 +26,16 @@ class SessionTable {
     return true;
   }
 
-  bool remove(Session& session) {
+  bool remove(const std::string& session_id) {
     try {
       odb::transaction t(_mysql_client->begin());
-      _mysql_client->erase(session);
+      _mysql_client->erase_query<Session>(odb::query<Session>::session_id ==
+                                          session_id);
       _mysql_client->erase_query<SessionMember>(
-          odb::query<SessionMember>::session_id == session.session_id());
+          odb::query<SessionMember>::session_id == session_id);
       t.commit();
     } catch (const std::exception& e) {
-      LOG_ERROR("会话 {} 移除失败: {}", session.session_name(), e.what());
+      LOG_ERROR("会话 {} 移除失败: {}", session_id, e.what());
       return false;
     }
     return true;

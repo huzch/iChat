@@ -75,7 +75,7 @@ message GetUserInfoReq {
 message GetUserInfoRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
+    optional string errmsg = 3; 
     UserInfo user_info = 4;
 }
 
@@ -86,8 +86,22 @@ message GetMultiUserInfoReq {
 message GetMultiUserInfoRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
+    optional string errmsg = 3; 
     map<string, UserInfo> users_info = 4;
+}
+
+//用户搜索
+message UserSearchReq {
+    string request_id = 1;
+    string search_key = 2;
+    optional string login_session_id = 3;
+    string user_id = 4;
+}
+message UserSearchRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3; 
+    repeated UserInfo users_info = 4;
 }
 
 //用户头像修改 
@@ -100,7 +114,7 @@ message SetUserAvatarReq {
 message SetUserAvatarRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
+    optional string errmsg = 3; 
 }
 
 //用户昵称修改 
@@ -113,7 +127,7 @@ message SetUserNameReq {
 message SetUserNameRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
+    optional string errmsg = 3; 
 }
 
 //用户签名修改 
@@ -126,7 +140,7 @@ message SetUserDescriptionReq {
 message SetUserDescriptionRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
+    optional string errmsg = 3; 
 }
 
 //用户手机修改 
@@ -141,7 +155,7 @@ message SetUserPhoneNumberReq {
 message SetUserPhoneNumberRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
+    optional string errmsg = 3; 
 }
 
 service UserService {
@@ -152,6 +166,7 @@ service UserService {
     rpc PhoneLogin(PhoneLoginReq) returns (PhoneLoginRsp);
     rpc GetUserInfo(GetUserInfoReq) returns (GetUserInfoRsp);
     rpc GetMultiUserInfo(GetMultiUserInfoReq) returns (GetMultiUserInfoRsp);
+    rpc UserSearch(UserSearchReq) returns (UserSearchRsp);
     rpc SetUserAvatar(SetUserAvatarReq) returns (SetUserAvatarRsp);
     rpc SetUserName(SetUserNameReq) returns (SetUserNameRsp);
     rpc SetUserDescription(SetUserDescriptionReq) returns (SetUserDescriptionRsp);

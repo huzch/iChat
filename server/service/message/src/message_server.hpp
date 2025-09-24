@@ -77,7 +77,7 @@ class MessageServiceImpl : public MessageService {
     }
 
     for (auto& message : messages) {
-      auto message_info = response->add_messages();
+      auto message_info = response->add_messages_info();
       message_info->set_message_id(message.message_id());
       message_info->set_chat_session_id(message.session_id());
       message_info->set_timestamp(
@@ -175,7 +175,7 @@ class MessageServiceImpl : public MessageService {
     }
 
     for (auto& message : messages) {
-      auto message_info = response->add_messages();
+      auto message_info = response->add_messages_info();
       message_info->set_message_id(message.message_id());
       message_info->set_chat_session_id(message.session_id());
       message_info->set_timestamp(
@@ -259,7 +259,7 @@ class MessageServiceImpl : public MessageService {
     }
 
     for (auto& message : messages) {
-      auto message_info = response->add_messages();
+      auto message_info = response->add_messages_info();
       message_info->set_message_id(message.message_id());
       message_info->set_chat_session_id(message.session_id());
       message_info->set_timestamp(
@@ -368,8 +368,8 @@ class MessageServiceImpl : public MessageService {
 
     stub.GetMultiUserInfo(&ctrl, &req, &rsp, nullptr);
     if (ctrl.Failed() || !rsp.success()) {
-      LOG_ERROR("{} {} 服务调用失败: {}", request_id, _user_service_name,
-                ctrl.ErrorText());
+      LOG_ERROR("{} {} 服务调用失败: {} {}", request_id, _user_service_name,
+                ctrl.ErrorText(), rsp.errmsg());
       return false;
     }
 
@@ -399,8 +399,8 @@ class MessageServiceImpl : public MessageService {
 
     stub.GetMultiFile(&ctrl, &req, &rsp, nullptr);
     if (ctrl.Failed() || !rsp.success()) {
-      LOG_ERROR("{} {} 服务调用失败: {}", request_id, _file_service_name,
-                ctrl.ErrorText());
+      LOG_ERROR("{} {} 服务调用失败: {} {}", request_id, _file_service_name,
+                ctrl.ErrorText(), rsp.errmsg());
       return false;
     }
 
@@ -430,8 +430,8 @@ class MessageServiceImpl : public MessageService {
 
     stub.PutSingleFile(&ctrl, &req, &rsp, nullptr);
     if (ctrl.Failed() || !rsp.success()) {
-      LOG_ERROR("{} {} 服务调用失败: {}", request_id, _file_service_name,
-                ctrl.ErrorText());
+      LOG_ERROR("{} {} 服务调用失败: {} {}", request_id, _file_service_name,
+                ctrl.ErrorText(), rsp.errmsg());
       return false;
     }
 

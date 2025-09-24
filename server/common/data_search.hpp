@@ -57,15 +57,14 @@ class ESUser {
   }
 
   std::vector<User> search(const std::string& key,
-                           const std::vector<std::string>& user_id_list) {
+                           const std::vector<std::string>& users_id) {
     std::vector<User> users;
-    Json::Value ret =
-        ESSearch(_es_client, "user")
-            .append_must_not_terms("user_id.keyword", user_id_list)
-            .append_should_match("user_id.keyword", key)
-            .append_should_match("name", key)
-            .append_should_match("phone.keyword", key)
-            .search();
+    auto ret = ESSearch(_es_client, "user")
+                   .append_must_not_terms("user_id.keyword", users_id)
+                   .append_should_match("user_id.keyword", key)
+                   .append_should_match("name", key)
+                   .append_should_match("phone.keyword", key)
+                   .search();
 
     if (!ret.isArray()) {
       LOG_ERROR("用户搜索结果不为数组类型");
@@ -145,10 +144,10 @@ class ESMessage {
   std::vector<Message> search(const std::string& key,
                               const std::string& session_id) {
     std::vector<Message> messages;
-    Json::Value ret = ESSearch(_es_client, "message")
-                          .append_must_term("session_id.keyword", session_id)
-                          .append_must_match("content", key)
-                          .search();
+    auto ret = ESSearch(_es_client, "message")
+                   .append_must_term("session_id.keyword", session_id)
+                   .append_must_match("content", key)
+                   .search();
 
     if (!ret.isArray()) {
       LOG_ERROR("用户搜索结果不为数组类型");

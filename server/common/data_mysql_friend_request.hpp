@@ -27,14 +27,15 @@ class FriendRequestTable {
     return true;
   }
 
-  bool remove(FriendRequest& friend_request) {
+  bool remove(const std::string& user_id, const std::string& peer_id) {
     try {
       odb::transaction t(_mysql_client->begin());
-      _mysql_client->erase(friend_request);
+      _mysql_client->erase_query<FriendRequest>(
+          odb::query<FriendRequest>::user_id == user_id &&
+          odb::query<FriendRequest>::peer_id == peer_id);
       t.commit();
     } catch (const std::exception& e) {
-      LOG_ERROR("好友申请 {}-{} 移除失败: {}", friend_request.user_id(),
-                friend_request.peer_id(), e.what());
+      LOG_ERROR("好友申请 {}-{} 移除失败: {}", user_id, peer_id, e.what());
       return false;
     }
     return true;
@@ -54,22 +55,22 @@ class FriendRequestTable {
     }
   }
 
-  std::vector<std::string> requesters(const std::string& user_id) {
-    std::vector<std::string> requesters;
+  std::vector<std::string> requesters_id(const std::string& user_id) {
+    std::vector<std::string> requesters_id;
     try {
       odb::transaction t(_mysql_client->begin());
       auto result = _mysql_client->query<FriendRequest>(
           odb::query<FriendRequest>::peer_id == user_id);
-      requesters.reserve(result.size());
-      for (const auto& requester : result) {
-        requesters.push_back(requester.user_id());
+      requesters_id.reserve(result.size());
+      for (auto& requester : result) {
+        requesters_id.push_back(requester.user_id());
       }
       t.commit();
     } catch (const std::exception& e) {
       LOG_ERROR("用户 {} 获取所有好友申请用户id失败: {}", user_id, e.what());
-      return requesters;
+      return requesters_id;
     }
-    return requesters;
+    return requesters_id;
   }
 
  private:
