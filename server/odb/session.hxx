@@ -6,6 +6,8 @@
 
 namespace huzch {
 
+enum class SessionType { SINGLE, GROUP };
+
 // 聊天会话
 #pragma db object table("session")
 class Session {
