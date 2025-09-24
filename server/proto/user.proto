@@ -67,13 +67,10 @@ message PhoneLoginRsp {
     string login_session_id = 4;
 }
 
-//个人信息获取-这个只用于获取当前登录用户的信息
-//客户端传递的时候只需要填充session_id即可
-//其他个人/好友信息的获取在好友操作中完成
 message GetUserInfoReq {
     string request_id = 1;
-    optional string user_id = 2;    // 这个字段是网关进行身份鉴权之后填入的字段
-    optional string session_id = 3; // 进行客户端身份识别的关键字段
+    optional string user_id = 2;
+    optional string session_id = 3;
 }
 message GetUserInfoRsp {
     string request_id = 1;
@@ -82,7 +79,6 @@ message GetUserInfoRsp {
     UserInfo user_info = 4;
 }
 
-//内部接口
 message GetMultiUserInfoReq {
     string request_id = 1;
     repeated string users_id = 2;
@@ -98,7 +94,7 @@ message GetMultiUserInfoRsp {
 message SetUserAvatarReq {
     string request_id = 1;
     optional string user_id = 2;
-    optional string session_id = 3;
+    optional string login_session_id = 3;
     bytes avatar = 4;
 }
 message SetUserAvatarRsp {
@@ -111,7 +107,7 @@ message SetUserAvatarRsp {
 message SetUserNameReq {
     string request_id = 1;
     optional string user_id = 2;
-    optional string session_id = 3;
+    optional string login_session_id = 3;
     string user_name = 4;
 }
 message SetUserNameRsp {
@@ -124,7 +120,7 @@ message SetUserNameRsp {
 message SetUserDescriptionReq {
     string request_id = 1;
     optional string user_id = 2;
-    optional string session_id = 3;
+    optional string login_session_id = 3;
     string description = 4;
 }
 message SetUserDescriptionRsp {
@@ -137,7 +133,7 @@ message SetUserDescriptionRsp {
 message SetUserPhoneNumberReq {
     string request_id = 1;
     optional string user_id = 2;
-    optional string session_id = 3;
+    optional string login_session_id = 3;
     string phone_number = 4;
     string phone_verify_code_id = 5;
     string phone_verify_code = 6;

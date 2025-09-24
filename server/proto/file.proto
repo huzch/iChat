@@ -8,7 +8,7 @@ message GetSingleFileReq {
     string request_id = 1;
     string file_id = 2;
     optional string user_id = 3;
-    optional string session_id = 4;
+    optional string login_session_id = 4;
 }
 message GetSingleFileRsp {
     string request_id = 1;
@@ -20,7 +20,7 @@ message GetSingleFileRsp {
 message GetMultiFileReq {
     string request_id = 1;
     optional string user_id = 2;
-    optional string session_id = 3;
+    optional string login_session_id = 3;
     repeated string files_id = 4;
 }
 message GetMultiFileRsp {
@@ -33,7 +33,7 @@ message GetMultiFileRsp {
 message PutSingleFileReq {
     string request_id = 1; //请求ID，作为处理流程唯一标识
     optional string user_id = 2;
-    optional string session_id = 3;
+    optional string login_session_id = 3;
     FileUploadData file_data = 4;
 }
 message PutSingleFileRsp {
@@ -46,7 +46,7 @@ message PutSingleFileRsp {
 message PutMultiFileReq {
     string request_id = 1;
     optional string user_id = 2;
-    optional string session_id = 3;
+    optional string login_session_id = 3;
     repeated FileUploadData files_data = 4;
 }
 message PutMultiFileRsp {

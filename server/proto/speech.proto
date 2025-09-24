@@ -4,20 +4,19 @@ package huzch;
 option cc_generic_services = true;
 
 message SpeechRecognizeReq {
-    string request_id = 1;              //请求ID
-    bytes speech_content = 2;           //语音数据
-    optional string user_id = 3;        //用户ID
-    optional string session_id = 4;     //登录会话ID -- 网关进行身份鉴权
+    string request_id = 1;
+    bytes speech_content = 2;
+    optional string user_id = 3;
+    optional string login_session_id = 4;
 }
 
 message SpeechRecognizeRsp {
-    string request_id = 1;              //请求ID
-    bool success = 2;                   //请求处理结果标志
-    optional string errmsg = 3;         //失败原因
-    optional string recognition_result = 4;      //识别后的文字数据
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3;
+    optional string recognition_result = 4;
 }
 
-//语音识别Rpc服务及接口的定义
 service SpeechService {
     rpc SpeechRecognize(SpeechRecognizeReq) returns (SpeechRecognizeRsp);
 }
