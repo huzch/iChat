@@ -14,10 +14,10 @@ class Relation {
       : _user_id(user_id), _peer_id(peer_id) {}
 
   void user_id(const std::string& val) { _user_id = val; }
-  std::string user_id() { return _user_id; }
+  std::string user_id() const { return _user_id; }
 
   void peer_id(const std::string& val) { _peer_id = val; }
-  std::string peer_id() { return _peer_id; }
+  std::string peer_id() const { return _peer_id; }
 
  private:
   friend class odb::access;

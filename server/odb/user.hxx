@@ -18,10 +18,10 @@ class User {
       : _user_id(user_id), _phone(phone) {}
 
   void user_id(const std::string& val) { _user_id = val; }
-  std::string user_id() { return _user_id; }
+  std::string user_id() const { return _user_id; }
 
   void avatar_id(const std::string& val) { _avatar_id = val; }
-  std::string avatar_id() {
+  std::string avatar_id() const {
     if (_avatar_id.null()) {
       return std::string();
     }
@@ -29,7 +29,7 @@ class User {
   }
 
   void name(const std::string& val) { _name = val; }
-  std::string name() {
+  std::string name() const {
     if (_name.null()) {
       return std::string();
     }
@@ -37,7 +37,7 @@ class User {
   }
 
   void phone(const std::string& val) { _phone = val; }
-  std::string phone() {
+  std::string phone() const {
     if (_phone.null()) {
       return std::string();
     }
@@ -45,7 +45,7 @@ class User {
   }
 
   void password(const std::string& val) { _password = val; }
-  std::string password() {
+  std::string password() const {
     if (_password.null()) {
       return std::string();
     }
@@ -53,7 +53,7 @@ class User {
   }
 
   void description(const std::string& val) { _description = val; }
-  std::string description() {
+  std::string description() const {
     if (_description.null()) {
       return std::string();
     }

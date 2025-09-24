@@ -14,10 +14,10 @@ class SessionMember {
       : _session_id(session_id), _user_id(user_id) {}
 
   void session_id(const std::string& val) { _session_id = val; }
-  std::string session_id() { return _session_id; }
+  std::string session_id() const { return _session_id; }
 
   void user_id(const std::string& val) { _user_id = val; }
-  std::string user_id() { return _user_id; }
+  std::string user_id() const { return _user_id; }
 
  private:
   friend class odb::access;

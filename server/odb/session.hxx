@@ -18,13 +18,13 @@ class Session {
       : _session_id(session_id), _session_name(session_name) {}
 
   void session_id(const std::string& val) { _session_id = val; }
-  std::string session_id() { return _session_id; }
+  std::string session_id() const { return _session_id; }
 
   void session_name(const std::string& val) { _session_name = val; }
-  std::string session_name() { return _session_name; }
+  std::string session_name() const { return _session_name; }
 
-  void session_type(const unsigned char val) { _session_type = val; }
-  unsigned char session_type() { return _session_type; }
+  void session_type(const SessionType& val) { _session_type = val; }
+  SessionType session_type() const { return _session_type; }
 
  private:
   friend class odb::access;
@@ -34,8 +34,7 @@ class Session {
   std::string _session_id;
 #pragma db type("varchar(64)")
   std::string _session_name;
-#pragma db
-  unsigned char _session_type;  // 0:single, 1:group
+  SessionType _session_type;  // 0:single, 1:group
 };
 
 #pragma db view object(Session)                                              \
