@@ -1,0 +1,38 @@
+syntax = "proto3";
+package huzch;
+import "base.proto";
+option cc_generic_services = true;
+
+enum NotifyType {
+    FRIEND_ADD_SEND_NOTIFY = 0;
+    FRIEND_ADD_PROCESS_NOTIFY = 1;
+    FRIEND_REMOVE_NOTIFY = 2;
+    CHAT_SESSION_CREATE_NOTIFY = 3;
+    CHAT_MESSAGE_NOTIFY = 4;
+} 
+message NotifyFriendAddSend {
+    UserInfo user_info = 1; // requester
+} 
+message NotifyFriendAddProcess {
+    bool agree = 1;
+    UserInfo user_info = 2; // respondent
+} 
+message NotifyFriendRemove {
+    string user_id = 1; // remover
+} 
+message NotifyNewChatSession {
+    ChatSessionInfo chat_session_info = 1;
+} 
+message NotifyNewMessage {
+    MessageInfo message_info = 1;
+} 
+message NotifyMessage {
+    NotifyType notify_type = 1;
+    oneof notify_remarks { //事件备注信息
+        NotifyFriendAddApply friend_add_apply = 2;
+        NotifyFriendAddProcess friend_process_result = 3;
+        NotifyFriendRemove friend_remove = 4;
+        NotifyNewChatSession new_chat_session_info = 5;
+        NotifyNewMessage new_message_info = 6;
+    } 
+}
