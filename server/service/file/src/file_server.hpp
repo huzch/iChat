@@ -182,8 +182,7 @@ class FileServerBuilder {
       abort();
     }
 
-    auto server = std::make_shared<FileServer>(_server);
-    return server;
+    return std::make_shared<FileServer>(_server);
   }
 
  private:

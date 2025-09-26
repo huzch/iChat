@@ -9,5 +9,6 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/user)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/forward)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/message)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/friend)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gateway)
 # 设置安装路径
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR})

@@ -5,12 +5,12 @@ import "base.proto";
 option cc_generic_services = true;
 
 //获取好友列表
-message GetFriendListReq {
+message GetFriendReq {
     string request_id = 1;
     string user_id = 2;
     optional string login_session_id = 3;
 }
-message GetFriendListRsp {
+message GetFriendRsp {
     string request_id = 1;
     bool success = 2;
     optional string errmsg = 3;
@@ -60,12 +60,12 @@ message FriendAddProcessRsp {
 }
 
 //获取申请好友者列表
-message GetRequesterListReq {
+message GetRequesterReq {
     string request_id = 1;
     string user_id = 2;
     optional string login_session_id = 3;
 }
-message GetRequesterListRsp {
+message GetRequesterRsp {
     string request_id = 1;
     bool success = 2;
     optional string errmsg = 3; 
@@ -73,12 +73,12 @@ message GetRequesterListRsp {
 }
 
 //会话列表获取
-message GetChatSessionListReq {
+message GetChatSessionReq {
     string request_id = 1;
     string user_id = 2;
     optional string login_session_id = 3;
 }
-message GetChatSessionListRsp {
+message GetChatSessionRsp {
     string request_id = 1;
     bool success = 2;
     optional string errmsg = 3; 
@@ -115,12 +115,12 @@ message GetChatSessionMemberRsp {
 }
 
 service FriendService {
-    rpc GetFriendList(GetFriendListReq) returns (GetFriendListRsp);
+    rpc GetFriend(GetFriendReq) returns (GetFriendRsp);
     rpc FriendRemove(FriendRemoveReq) returns (FriendRemoveRsp);
     rpc FriendAddSend(FriendAddSendReq) returns (FriendAddSendRsp);
     rpc FriendAddProcess(FriendAddProcessReq) returns (FriendAddProcessRsp);
-    rpc GetRequesterList(GetRequesterListReq) returns (GetRequesterListRsp);
-    rpc GetChatSessionList(GetChatSessionListReq) returns (GetChatSessionListRsp);
+    rpc GetRequester(GetRequesterReq) returns (GetRequesterRsp);
+    rpc GetChatSession(GetChatSessionReq) returns (GetChatSessionRsp);
     rpc ChatSessionCreate(ChatSessionCreateReq) returns (ChatSessionCreateRsp);
     rpc GetChatSessionMember(GetChatSessionMemberReq) returns (GetChatSessionMemberRsp);
 }

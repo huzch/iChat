@@ -7,16 +7,17 @@
 namespace huzch {
 
 struct ClientInfo {
-  ClientInfo(const std::string& user_id, const std::string& session_id)
+  ClientInfo(const std::string& user_id = "",
+             const std::string& session_id = "")
       : _user_id(user_id), _session_id(session_id) {}
 
   std::string _user_id;
   std::string _session_id;
 };
 
-class Connection {
+class ConnectionManager {
  public:
-  using Ptr = std::shared_ptr<Connection>;
+  using Ptr = std::shared_ptr<ConnectionManager>;
   using ConnectionPtr =
       websocketpp::server<websocketpp::config::asio>::connection_ptr;
 

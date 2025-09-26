@@ -29,9 +29,9 @@ std::string file_name;
 //   req.set_chat_session_id(chat_session_id);
 //   req.mutable_message()->set_message_type(huzch::MessageType::STRING);
 //   req.mutable_message()->mutable_string_message()->set_content(content);
-//   huzch::GetForwardTargetRsp rsp;
+//   huzch::NewMessageRsp rsp;
 
-//   stub.GetForwardTarget(&ctrl, &req, &rsp, nullptr);
+//   stub.NewMessage(&ctrl, &req, &rsp, nullptr);
 //   ASSERT_FALSE(ctrl.Failed());
 //   ASSERT_TRUE(rsp.success());
 // }
@@ -45,9 +45,9 @@ std::string file_name;
 //   req.set_chat_session_id(chat_session_id);
 //   req.mutable_message()->set_message_type(huzch::MessageType::SPEECH);
 //   req.mutable_message()->mutable_speech_message()->set_file_content(content);
-//   huzch::GetForwardTargetRsp rsp;
+//   huzch::NewMessageRsp rsp;
 
-//   stub.GetForwardTarget(&ctrl, &req, &rsp, nullptr);
+//   stub.NewMessage(&ctrl, &req, &rsp, nullptr);
 //   ASSERT_FALSE(ctrl.Failed());
 //   ASSERT_TRUE(rsp.success());
 // }
@@ -61,9 +61,9 @@ std::string file_name;
 //   req.set_chat_session_id(chat_session_id);
 //   req.mutable_message()->set_message_type(huzch::MessageType::IMAGE);
 //   req.mutable_message()->mutable_image_message()->set_file_content(content);
-//   huzch::GetForwardTargetRsp rsp;
+//   huzch::NewMessageRsp rsp;
 
-//   stub.GetForwardTarget(&ctrl, &req, &rsp, nullptr);
+//   stub.NewMessage(&ctrl, &req, &rsp, nullptr);
 //   ASSERT_FALSE(ctrl.Failed());
 //   ASSERT_TRUE(rsp.success());
 // }
@@ -79,9 +79,9 @@ TEST(forward_test, file_message) {
   req.mutable_message()->mutable_file_message()->set_file_name(file_name);
   req.mutable_message()->mutable_file_message()->set_file_size(content.size());
   req.mutable_message()->mutable_file_message()->set_file_content(content);
-  huzch::GetForwardTargetRsp rsp;
+  huzch::NewMessageRsp rsp;
 
-  stub.GetForwardTarget(&ctrl, &req, &rsp, nullptr);
+  stub.NewMessage(&ctrl, &req, &rsp, nullptr);
   ASSERT_FALSE(ctrl.Failed());
   ASSERT_TRUE(rsp.success());
 }
@@ -92,21 +92,21 @@ int main(int argc, char* argv[]) {
   huzch::init_logger(FLAGS_run_mode, FLAGS_log_file, FLAGS_log_level);
 
   // 初始化rpc服务信道管理
-  auto service_manager = std::make_shared<huzch::ServiceManager>();
-  service_manager->declare(FLAGS_base_dir + FLAGS_forward_service_name);
-  auto put_cb = std::bind(&huzch::ServiceManager::on_service_online,
-                          service_manager.get(), std::placeholders::_1,
-                          std::placeholders::_2);
-  auto del_cb = std::bind(&huzch::ServiceManager::on_service_offline,
-                          service_manager.get(), std::placeholders::_1,
-                          std::placeholders::_2);
+  auto channels = std::make_shared<huzch::ChannelManager>();
+  channels->declare(FLAGS_base_dir + FLAGS_forward_service_name);
+  auto put_cb =
+      std::bind(&huzch::ChannelManager::on_service_online, channels.get(),
+                std::placeholders::_1, std::placeholders::_2);
+  auto del_cb =
+      std::bind(&huzch::ChannelManager::on_service_offline, channels.get(),
+                std::placeholders::_1, std::placeholders::_2);
 
   // 初始化服务发现
   auto discovery_client = std::make_shared<huzch::ServiceDiscovery>(
       FLAGS_registry_host, FLAGS_base_dir, put_cb, del_cb);
 
   // 获取rpc服务信道
-  channel = service_manager->get(FLAGS_base_dir + FLAGS_forward_service_name);
+  channel = channels->get(FLAGS_base_dir + FLAGS_forward_service_name);
   if (!channel) {
     return -1;
   }

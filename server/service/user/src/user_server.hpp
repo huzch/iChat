@@ -21,7 +21,7 @@ class UserServiceImpl : public UserService {
                   const std::shared_ptr<sw::redis::Redis>& redis_client,
                   const SMSClient::Ptr& sms_client,
                   const std::string& file_service_name,
-                  const ServiceManager::Ptr& service_manager)
+                  const ChannelManager::Ptr& channels)
       : _es_user(std::make_shared<ESUser>(es_client)),
         _mysql_user(std::make_shared<UserTable>(mysql_client)),
         _redis_session(std::make_shared<Session>(redis_client)),
@@ -29,7 +29,7 @@ class UserServiceImpl : public UserService {
         _redis_code(std::make_shared<Code>(redis_client)),
         _sms_client(sms_client),
         _file_service_name(file_service_name),
-        _service_manager(service_manager) {
+        _channels(channels) {
     _es_user->index();
   }
 
@@ -315,7 +315,7 @@ class UserServiceImpl : public UserService {
     response->mutable_user_info()->set_phone(user->phone());
     response->mutable_user_info()->set_description(user->description());
     if (!user->avatar_id().empty()) {
-      auto channel = _service_manager->get(_file_service_name);
+      auto channel = _channels->get(_file_service_name);
       if (!channel) {
         LOG_ERROR("{} 未找到 {} 服务节点", request_id, _file_service_name);
         err_rsp("未找到服务节点");
@@ -465,7 +465,7 @@ class UserServiceImpl : public UserService {
       return;
     }
 
-    auto channel = _service_manager->get(_file_service_name);
+    auto channel = _channels->get(_file_service_name);
     if (!channel) {
       LOG_ERROR("{} 未找到 {} 服务节点", request_id, _file_service_name);
       err_rsp("未找到服务节点");
@@ -657,7 +657,7 @@ class UserServiceImpl : public UserService {
   bool get_file(const std::string& request_id,
                 const std::unordered_set<std::string> files_id,
                 std::unordered_map<std::string, std::string>& files_data) {
-    auto channel = _service_manager->get(_file_service_name);
+    auto channel = _channels->get(_file_service_name);
     if (!channel) {
       LOG_ERROR("{} 未找到 {} 服务节点", request_id, _file_service_name);
       return false;
@@ -753,7 +753,7 @@ class UserServiceImpl : public UserService {
 
   SMSClient::Ptr _sms_client;
   std::string _file_service_name;
-  ServiceManager::Ptr _service_manager;
+  ChannelManager::Ptr _channels;
 };
 
 class UserServer {
@@ -783,13 +783,12 @@ class UserServerBuilder {
                              const std::string& base_dir,
                              const std::string& service_name) {
     _file_service_name = base_dir + service_name;
-    _service_manager = std::make_shared<ServiceManager>();
-    _service_manager->declare(base_dir + service_name);
-    auto put_cb =
-        std::bind(&ServiceManager::on_service_online, _service_manager.get(),
-                  std::placeholders::_1, std::placeholders::_2);
+    _channels = std::make_shared<ChannelManager>();
+    _channels->declare(base_dir + service_name);
+    auto put_cb = std::bind(&ChannelManager::on_service_online, _channels.get(),
+                            std::placeholders::_1, std::placeholders::_2);
     auto del_cb =
-        std::bind(&ServiceManager::on_service_offline, _service_manager.get(),
+        std::bind(&ChannelManager::on_service_offline, _channels.get(),
                   std::placeholders::_1, std::placeholders::_2);
 
     _discovery_client = std::make_shared<ServiceDiscovery>(
@@ -800,8 +799,8 @@ class UserServerBuilder {
     _sms_client = std::make_shared<SMSClient>(key_id);
   }
 
-  void init_es_client(const std::vector<std::string>& host_list) {
-    _es_client = ESClientFactory::create(host_list);
+  void init_es_client(const std::vector<std::string>& hosts) {
+    _es_client = ESClientFactory::create(hosts);
   }
 
   void init_mysql_client(const std::string& user, const std::string& passwd,
@@ -841,7 +840,7 @@ class UserServerBuilder {
     _server = std::make_shared<brpc::Server>();
     auto user_service =
         new UserServiceImpl(_es_client, _mysql_client, _redis_client,
-                            _sms_client, _file_service_name, _service_manager);
+                            _sms_client, _file_service_name, _channels);
     int ret = _server->AddService(user_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
     if (ret == -1) {
@@ -870,13 +869,17 @@ class UserServerBuilder {
       abort();
     }
 
+    if (!_channels) {
+      LOG_ERROR("未初始化服务信道管理模块");
+      abort();
+    }
+
     if (!_server) {
       LOG_ERROR("未初始化rpc服务器模块");
       abort();
     }
 
-    auto server = std::make_shared<UserServer>(_server);
-    return server;
+    return std::make_shared<UserServer>(_server);
   }
 
  private:
@@ -889,7 +892,7 @@ class UserServerBuilder {
   std::shared_ptr<brpc::Server> _server;
 
   std::string _file_service_name;
-  ServiceManager::Ptr _service_manager;
+  ChannelManager::Ptr _channels;
 };
 
 }  // namespace huzch

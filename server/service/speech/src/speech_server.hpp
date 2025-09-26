@@ -101,8 +101,7 @@ class SpeechServerBuilder {
       abort();
     }
 
-    auto server = std::make_shared<SpeechServer>(_server);
-    return server;
+    return std::make_shared<SpeechServer>(_server);
   }
 
  private:

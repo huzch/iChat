@@ -29,8 +29,8 @@ message NotifyNewMessage {
 message NotifyMessage {
     NotifyType notify_type = 1;
     oneof notify_remarks { //事件备注信息
-        NotifyFriendAddApply friend_add_apply = 2;
-        NotifyFriendAddProcess friend_process_result = 3;
+        NotifyFriendAddSend friend_add_send = 2;
+        NotifyFriendAddProcess friend_add_process = 3;
         NotifyFriendRemove friend_remove = 4;
         NotifyNewChatSession new_chat_session_info = 5;
         NotifyNewMessage new_message_info = 6;

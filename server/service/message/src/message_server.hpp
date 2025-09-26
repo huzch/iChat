@@ -20,12 +20,12 @@ class MessageServiceImpl : public MessageService {
                      const std::shared_ptr<odb::core::database>& mysql_client,
                      const std::string& file_service_name,
                      const std::string& user_service_name,
-                     const ServiceManager::Ptr& service_manager)
+                     const ChannelManager::Ptr& channels)
       : _es_message(std::make_shared<ESMessage>(es_client)),
         _mysql_message(std::make_shared<MessageTable>(mysql_client)),
         _file_service_name(file_service_name),
         _user_service_name(user_service_name),
-        _service_manager(service_manager) {
+        _channels(channels) {
     _es_message->index();
   }
 
@@ -351,7 +351,7 @@ class MessageServiceImpl : public MessageService {
   bool get_user(const std::string& request_id,
                 const std::unordered_set<std::string> users_id,
                 std::unordered_map<std::string, UserInfo>& users_info) {
-    auto channel = _service_manager->get(_user_service_name);
+    auto channel = _channels->get(_user_service_name);
     if (!channel) {
       LOG_ERROR("{} 未找到 {} 服务节点", request_id, _user_service_name);
       return false;
@@ -382,7 +382,7 @@ class MessageServiceImpl : public MessageService {
   bool get_file(const std::string& request_id,
                 const std::unordered_set<std::string> files_id,
                 std::unordered_map<std::string, std::string>& files_data) {
-    auto channel = _service_manager->get(_file_service_name);
+    auto channel = _channels->get(_file_service_name);
     if (!channel) {
       LOG_ERROR("{} 未找到 {} 服务节点", request_id, _file_service_name);
       return false;
@@ -413,7 +413,7 @@ class MessageServiceImpl : public MessageService {
   bool put_file(std::string& file_id, const std::string& file_name,
                 const uint64_t file_size, const std::string& file_content) {
     std::string request_id = uuid();
-    auto channel = _service_manager->get(_file_service_name);
+    auto channel = _channels->get(_file_service_name);
     if (!channel) {
       LOG_ERROR("{} 未找到 {} 服务节点", request_id, _file_service_name);
       return false;
@@ -445,7 +445,7 @@ class MessageServiceImpl : public MessageService {
 
   std::string _file_service_name;
   std::string _user_service_name;
-  ServiceManager::Ptr _service_manager;
+  ChannelManager::Ptr _channels;
 };
 
 class MessageServer {
@@ -478,14 +478,13 @@ class MessageServerBuilder {
                              const std::string& user_service_name) {
     _file_service_name = base_dir + file_service_name;
     _user_service_name = base_dir + user_service_name;
-    _service_manager = std::make_shared<ServiceManager>();
-    _service_manager->declare(base_dir + file_service_name);
-    _service_manager->declare(base_dir + user_service_name);
-    auto put_cb =
-        std::bind(&ServiceManager::on_service_online, _service_manager.get(),
-                  std::placeholders::_1, std::placeholders::_2);
+    _channels = std::make_shared<ChannelManager>();
+    _channels->declare(base_dir + file_service_name);
+    _channels->declare(base_dir + user_service_name);
+    auto put_cb = std::bind(&ChannelManager::on_service_online, _channels.get(),
+                            std::placeholders::_1, std::placeholders::_2);
     auto del_cb =
-        std::bind(&ServiceManager::on_service_offline, _service_manager.get(),
+        std::bind(&ChannelManager::on_service_offline, _channels.get(),
                   std::placeholders::_1, std::placeholders::_2);
 
     _discovery_client = std::make_shared<ServiceDiscovery>(
@@ -500,8 +499,8 @@ class MessageServerBuilder {
     _mq_client->declare(exchange, queue);
   }
 
-  void init_es_client(const std::vector<std::string>& host_list) {
-    _es_client = ESClientFactory::create(host_list);
+  void init_es_client(const std::vector<std::string>& hosts) {
+    _es_client = ESClientFactory::create(hosts);
   }
 
   void init_mysql_client(const std::string& user, const std::string& passwd,
@@ -531,7 +530,7 @@ class MessageServerBuilder {
     _server = std::make_shared<brpc::Server>();
     auto message_service =
         new MessageServiceImpl(_es_client, _mysql_client, _file_service_name,
-                               _user_service_name, _service_manager);
+                               _user_service_name, _channels);
     int ret = _server->AddService(message_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
     if (ret == -1) {
@@ -564,13 +563,17 @@ class MessageServerBuilder {
       abort();
     }
 
+    if (!_channels) {
+      LOG_ERROR("未初始化服务信道管理模块");
+      abort();
+    }
+
     if (!_server) {
       LOG_ERROR("未初始化rpc服务器模块");
       abort();
     }
 
-    auto server = std::make_shared<MessageServer>(_server);
-    return server;
+    return std::make_shared<MessageServer>(_server);
   }
 
  private:
@@ -584,7 +587,7 @@ class MessageServerBuilder {
 
   std::string _file_service_name;
   std::string _user_service_name;
-  ServiceManager::Ptr _service_manager;
+  ChannelManager::Ptr _channels;
 };
 
 }  // namespace huzch

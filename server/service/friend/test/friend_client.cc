@@ -39,12 +39,12 @@ std::vector<std::string> users_id;
 // TEST(get_test, get_request) {
 //   huzch::FriendService_Stub stub(channel.get());
 //   brpc::Controller ctrl;
-//   huzch::GetRequesterListReq req;
+//   huzch::GetRequesterReq req;
 //   req.set_request_id(huzch::uuid());
 //   req.set_user_id(peer_id);
-//   huzch::GetRequesterListRsp rsp;
+//   huzch::GetRequesterRsp rsp;
 
-//   stub.GetRequesterList(&ctrl, &req, &rsp, nullptr);
+//   stub.GetRequester(&ctrl, &req, &rsp, nullptr);
 //   ASSERT_FALSE(ctrl.Failed());
 //   ASSERT_TRUE(rsp.success());
 
@@ -79,12 +79,12 @@ std::vector<std::string> users_id;
 // TEST(get_test, get_friend) {
 //   huzch::FriendService_Stub stub(channel.get());
 //   brpc::Controller ctrl;
-//   huzch::GetFriendListReq req;
+//   huzch::GetFriendReq req;
 //   req.set_request_id(huzch::uuid());
 //   req.set_user_id(user_id);
-//   huzch::GetFriendListRsp rsp;
+//   huzch::GetFriendRsp rsp;
 
-//   stub.GetFriendList(&ctrl, &req, &rsp, nullptr);
+//   stub.GetFriend(&ctrl, &req, &rsp, nullptr);
 //   ASSERT_FALSE(ctrl.Failed());
 //   ASSERT_TRUE(rsp.success());
 
@@ -155,12 +155,12 @@ std::vector<std::string> users_id;
 TEST(get_test, get_session) {
   huzch::FriendService_Stub stub(channel.get());
   brpc::Controller ctrl;
-  huzch::GetChatSessionListReq req;
+  huzch::GetChatSessionReq req;
   req.set_request_id(huzch::uuid());
   req.set_user_id(user_id);
-  huzch::GetChatSessionListRsp rsp;
+  huzch::GetChatSessionRsp rsp;
 
-  stub.GetChatSessionList(&ctrl, &req, &rsp, nullptr);
+  stub.GetChatSession(&ctrl, &req, &rsp, nullptr);
   ASSERT_FALSE(ctrl.Failed());
   ASSERT_TRUE(rsp.success());
 
@@ -190,21 +190,21 @@ int main(int argc, char* argv[]) {
   huzch::init_logger(FLAGS_run_mode, FLAGS_log_file, FLAGS_log_level);
 
   // 初始化rpc服务信道管理
-  auto service_manager = std::make_shared<huzch::ServiceManager>();
-  service_manager->declare(FLAGS_base_dir + FLAGS_friend_service_name);
-  auto put_cb = std::bind(&huzch::ServiceManager::on_service_online,
-                          service_manager.get(), std::placeholders::_1,
-                          std::placeholders::_2);
-  auto del_cb = std::bind(&huzch::ServiceManager::on_service_offline,
-                          service_manager.get(), std::placeholders::_1,
-                          std::placeholders::_2);
+  auto channels = std::make_shared<huzch::ChannelManager>();
+  channels->declare(FLAGS_base_dir + FLAGS_friend_service_name);
+  auto put_cb =
+      std::bind(&huzch::ChannelManager::on_service_online, channels.get(),
+                std::placeholders::_1, std::placeholders::_2);
+  auto del_cb =
+      std::bind(&huzch::ChannelManager::on_service_offline, channels.get(),
+                std::placeholders::_1, std::placeholders::_2);
 
   // 初始化服务发现
   auto discovery_client = std::make_shared<huzch::ServiceDiscovery>(
       FLAGS_registry_host, FLAGS_base_dir, put_cb, del_cb);
 
   // 获取rpc服务信道
-  channel = service_manager->get(FLAGS_base_dir + FLAGS_friend_service_name);
+  channel = channels->get(FLAGS_base_dir + FLAGS_friend_service_name);
   if (!channel) {
     return -1;
   }

@@ -235,21 +235,21 @@ int main(int argc, char* argv[]) {
   huzch::init_logger(FLAGS_run_mode, FLAGS_log_file, FLAGS_log_level);
 
   // 初始化rpc服务信道管理
-  auto service_manager = std::make_shared<huzch::ServiceManager>();
-  service_manager->declare(FLAGS_base_dir + FLAGS_user_service_name);
-  auto put_cb = std::bind(&huzch::ServiceManager::on_service_online,
-                          service_manager.get(), std::placeholders::_1,
-                          std::placeholders::_2);
-  auto del_cb = std::bind(&huzch::ServiceManager::on_service_offline,
-                          service_manager.get(), std::placeholders::_1,
-                          std::placeholders::_2);
+  auto channels = std::make_shared<huzch::ChannelManager>();
+  channels->declare(FLAGS_base_dir + FLAGS_user_service_name);
+  auto put_cb =
+      std::bind(&huzch::ChannelManager::on_service_online, channels.get(),
+                std::placeholders::_1, std::placeholders::_2);
+  auto del_cb =
+      std::bind(&huzch::ChannelManager::on_service_offline, channels.get(),
+                std::placeholders::_1, std::placeholders::_2);
 
   // 初始化服务发现
   auto discovery_client = std::make_shared<huzch::ServiceDiscovery>(
       FLAGS_registry_host, FLAGS_base_dir, put_cb, del_cb);
 
   // 获取rpc服务信道
-  channel = service_manager->get(FLAGS_base_dir + FLAGS_user_service_name);
+  channel = channels->get(FLAGS_base_dir + FLAGS_user_service_name);
   if (!channel) {
     return -1;
   }

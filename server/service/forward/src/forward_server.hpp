@@ -18,18 +18,17 @@ class ForwardServiceImpl : public ForwardService {
                      const std::string& exchange_name,
                      const MQClient::Ptr& mq_client,
                      const std::string& user_service_name,
-                     const ServiceManager::Ptr& service_manager)
+                     const ChannelManager::Ptr& channels)
       : _mysql_session_member(
             std::make_shared<SessionMemberTable>(mysql_client)),
         _exchange_name(exchange_name),
         _mq_client(mq_client),
         _user_service_name(user_service_name),
-        _service_manager(service_manager) {}
+        _channels(channels) {}
 
-  void GetForwardTarget(google::protobuf::RpcController* controller,
-                        const NewMessageReq* request,
-                        GetForwardTargetRsp* response,
-                        google::protobuf::Closure* done) {
+  void NewMessage(google::protobuf::RpcController* controller,
+                  const NewMessageReq* request, NewMessageRsp* response,
+                  google::protobuf::Closure* done) {
     brpc::ClosureGuard rpc_guard(done);
     std::string request_id = request->request_id();
     response->set_request_id(request_id);
@@ -42,7 +41,7 @@ class ForwardServiceImpl : public ForwardService {
     std::string chat_session_id = request->chat_session_id();
     const MessageContent& content = request->message();
 
-    auto channel = _service_manager->get(_user_service_name);
+    auto channel = _channels->get(_user_service_name);
     if (!channel) {
       LOG_ERROR("{} 未找到 {} 服务节点", request_id, _user_service_name);
       err_rsp("未找到服务节点");
@@ -83,7 +82,7 @@ class ForwardServiceImpl : public ForwardService {
     }
 
     response->set_success(true);
-    response->mutable_message()->CopyFrom(message_info);
+    response->mutable_message_info()->CopyFrom(message_info);
     for (auto& member : members) {
       response->add_targets_id(member.user_id());
     }
@@ -95,7 +94,7 @@ class ForwardServiceImpl : public ForwardService {
   std::string _exchange_name;
   MQClient::Ptr _mq_client;
   std::string _user_service_name;
-  ServiceManager::Ptr _service_manager;
+  ChannelManager::Ptr _channels;
 };
 
 class ForwardServer {
@@ -126,13 +125,12 @@ class ForwardServerBuilder {
                              const std::string& base_dir,
                              const std::string& service_name) {
     _user_service_name = base_dir + service_name;
-    _service_manager = std::make_shared<ServiceManager>();
-    _service_manager->declare(base_dir + service_name);
-    auto put_cb =
-        std::bind(&ServiceManager::on_service_online, _service_manager.get(),
-                  std::placeholders::_1, std::placeholders::_2);
+    _channels = std::make_shared<ChannelManager>();
+    _channels->declare(base_dir + service_name);
+    auto put_cb = std::bind(&ChannelManager::on_service_online, _channels.get(),
+                            std::placeholders::_1, std::placeholders::_2);
     auto del_cb =
-        std::bind(&ServiceManager::on_service_offline, _service_manager.get(),
+        std::bind(&ChannelManager::on_service_offline, _channels.get(),
                   std::placeholders::_1, std::placeholders::_2);
 
     _discovery_client = std::make_shared<ServiceDiscovery>(
@@ -169,7 +167,7 @@ class ForwardServerBuilder {
     _server = std::make_shared<brpc::Server>();
     auto forward_service =
         new ForwardServiceImpl(_mysql_client, _exchange_name, _mq_client,
-                               _user_service_name, _service_manager);
+                               _user_service_name, _channels);
     int ret = _server->AddService(forward_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
     if (ret == -1) {
@@ -198,13 +196,17 @@ class ForwardServerBuilder {
       abort();
     }
 
+    if (!_channels) {
+      LOG_ERROR("未初始化服务信道管理模块");
+      abort();
+    }
+
     if (!_server) {
       LOG_ERROR("未初始化rpc服务器模块");
       abort();
     }
 
-    auto server = std::make_shared<ForwardServer>(_server);
-    return server;
+    return std::make_shared<ForwardServer>(_server);
   }
 
  private:
@@ -216,7 +218,7 @@ class ForwardServerBuilder {
   std::shared_ptr<brpc::Server> _server;
 
   std::string _user_service_name;
-  ServiceManager::Ptr _service_manager;
+  ChannelManager::Ptr _channels;
 };
 
 }  // namespace huzch

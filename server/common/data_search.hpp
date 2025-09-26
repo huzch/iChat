@@ -9,8 +9,8 @@ namespace huzch {
 class ESClientFactory {
  public:
   static std::shared_ptr<elasticlient::Client> create(
-      const std::vector<std::string>& host_list) {
-    return std::make_shared<elasticlient::Client>(host_list);
+      const std::vector<std::string>& hosts) {
+    return std::make_shared<elasticlient::Client>(hosts);
   }
 };
 

@@ -21,7 +21,7 @@ class FriendServiceImpl : public FriendService {
   FriendServiceImpl(const std::shared_ptr<odb::core::database>& mysql_client,
                     const std::string& user_service_name,
                     const std::string& message_service_name,
-                    const ServiceManager::Ptr& service_manager)
+                    const ChannelManager::Ptr& channels)
       : _mysql_session(std::make_shared<SessionTable>(mysql_client)),
         _mysql_session_member(
             std::make_shared<SessionMemberTable>(mysql_client)),
@@ -30,12 +30,11 @@ class FriendServiceImpl : public FriendService {
             std::make_shared<FriendRequestTable>(mysql_client)),
         _user_service_name(user_service_name),
         _message_service_name(message_service_name),
-        _service_manager(service_manager) {}
+        _channels(channels) {}
 
-  void GetFriendList(google::protobuf::RpcController* controller,
-                     const GetFriendListReq* request,
-                     GetFriendListRsp* response,
-                     google::protobuf::Closure* done) {
+  void GetFriend(google::protobuf::RpcController* controller,
+                 const GetFriendReq* request, GetFriendRsp* response,
+                 google::protobuf::Closure* done) {
     brpc::ClosureGuard rpc_guard(done);
     std::string request_id = request->request_id();
     response->set_request_id(request_id);
@@ -198,10 +197,9 @@ class FriendServiceImpl : public FriendService {
     response->set_chat_session_id(chat_session_id);
   }
 
-  void GetRequesterList(google::protobuf::RpcController* controller,
-                        const GetRequesterListReq* request,
-                        GetRequesterListRsp* response,
-                        google::protobuf::Closure* done) {
+  void GetRequester(google::protobuf::RpcController* controller,
+                    const GetRequesterReq* request, GetRequesterRsp* response,
+                    google::protobuf::Closure* done) {
     brpc::ClosureGuard rpc_guard(done);
     std::string request_id = request->request_id();
     response->set_request_id(request_id);
@@ -233,10 +231,10 @@ class FriendServiceImpl : public FriendService {
     response->set_success(true);
   }
 
-  void GetChatSessionList(google::protobuf::RpcController* controller,
-                          const GetChatSessionListReq* request,
-                          GetChatSessionListRsp* response,
-                          google::protobuf::Closure* done) {
+  void GetChatSession(google::protobuf::RpcController* controller,
+                      const GetChatSessionReq* request,
+                      GetChatSessionRsp* response,
+                      google::protobuf::Closure* done) {
     brpc::ClosureGuard rpc_guard(done);
     std::string request_id = request->request_id();
     response->set_request_id(request_id);
@@ -378,7 +376,7 @@ class FriendServiceImpl : public FriendService {
   bool get_user(const std::string& request_id,
                 const std::unordered_set<std::string> users_id,
                 std::unordered_map<std::string, UserInfo>& users_info) {
-    auto channel = _service_manager->get(_user_service_name);
+    auto channel = _channels->get(_user_service_name);
     if (!channel) {
       LOG_ERROR("{} 未找到 {} 服务节点", request_id, _user_service_name);
       return false;
@@ -409,7 +407,7 @@ class FriendServiceImpl : public FriendService {
   bool get_message(const std::string& request_id,
                    const std::string& chat_session_id,
                    MessageInfo& message_info) {
-    auto channel = _service_manager->get(_message_service_name);
+    auto channel = _channels->get(_message_service_name);
     if (!channel) {
       LOG_ERROR("{} 未找到 {} 服务节点", request_id, _message_service_name);
       return false;
@@ -446,7 +444,7 @@ class FriendServiceImpl : public FriendService {
 
   std::string _user_service_name;
   std::string _message_service_name;
-  ServiceManager::Ptr _service_manager;
+  ChannelManager::Ptr _channels;
 };
 
 class FriendServer {
@@ -478,14 +476,13 @@ class FriendServerBuilder {
                              const std::string& message_service_name) {
     _user_service_name = base_dir + user_service_name;
     _message_service_name = base_dir + message_service_name;
-    _service_manager = std::make_shared<ServiceManager>();
-    _service_manager->declare(base_dir + user_service_name);
-    _service_manager->declare(base_dir + message_service_name);
-    auto put_cb =
-        std::bind(&ServiceManager::on_service_online, _service_manager.get(),
-                  std::placeholders::_1, std::placeholders::_2);
+    _channels = std::make_shared<ChannelManager>();
+    _channels->declare(base_dir + user_service_name);
+    _channels->declare(base_dir + message_service_name);
+    auto put_cb = std::bind(&ChannelManager::on_service_online, _channels.get(),
+                            std::placeholders::_1, std::placeholders::_2);
     auto del_cb =
-        std::bind(&ServiceManager::on_service_offline, _service_manager.get(),
+        std::bind(&ChannelManager::on_service_offline, _channels.get(),
                   std::placeholders::_1, std::placeholders::_2);
 
     _discovery_client = std::make_shared<ServiceDiscovery>(
@@ -507,9 +504,8 @@ class FriendServerBuilder {
     }
 
     _server = std::make_shared<brpc::Server>();
-    auto friend_service =
-        new FriendServiceImpl(_mysql_client, _user_service_name,
-                              _message_service_name, _service_manager);
+    auto friend_service = new FriendServiceImpl(
+        _mysql_client, _user_service_name, _message_service_name, _channels);
     int ret = _server->AddService(friend_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
     if (ret == -1) {
@@ -538,13 +534,17 @@ class FriendServerBuilder {
       abort();
     }
 
+    if (!_channels) {
+      LOG_ERROR("未初始化服务信道管理模块");
+      abort();
+    }
+
     if (!_server) {
       LOG_ERROR("未初始化rpc服务器模块");
       abort();
     }
 
-    auto server = std::make_shared<FriendServer>(_server);
-    return server;
+    return std::make_shared<FriendServer>(_server);
   }
 
  private:
@@ -555,7 +555,7 @@ class FriendServerBuilder {
 
   std::string _user_service_name;
   std::string _message_service_name;
-  ServiceManager::Ptr _service_manager;
+  ChannelManager::Ptr _channels;
 };
 
 }  // namespace huzch

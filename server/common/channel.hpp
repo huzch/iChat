@@ -75,9 +75,9 @@ class ServiceChannel {
 };
 
 // 服务管理(管理所有服务对应的所有信道)
-class ServiceManager {
+class ChannelManager {
  public:
-  using Ptr = std::shared_ptr<ServiceManager>;
+  using Ptr = std::shared_ptr<ChannelManager>;
 
  public:
   void declare(const std::string& service_name) {

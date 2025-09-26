@@ -15,16 +15,10 @@ message NewMessageRsp {
     string request_id = 1;
     bool success = 2;
     optional string errmsg = 3; 
-}
-
-message GetForwardTargetRsp {
-    string request_id = 1;
-    bool success = 2;
-    optional string errmsg = 3; 
-    MessageInfo message = 4;
+    MessageInfo message_info = 4;
     repeated string targets_id = 5;
 }
 
 service ForwardService {
-    rpc GetForwardTarget(NewMessageReq) returns (GetForwardTargetRsp);
+    rpc NewMessage(NewMessageReq) returns (NewMessageRsp);
 }
