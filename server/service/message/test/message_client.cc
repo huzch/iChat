@@ -37,28 +37,30 @@ TEST(get_test, history_message) {
   ASSERT_FALSE(ctrl.Failed());
   ASSERT_TRUE(rsp.success());
 
-  for (const auto& message : rsp.messages()) {
-    std::cout << message.message_id() << std::endl;
-    std::cout << message.chat_session_id() << std::endl;
+  for (const auto& message_info : rsp.messages_info()) {
+    std::cout << message_info.message_id() << std::endl;
+    std::cout << message_info.chat_session_id() << std::endl;
     std::cout << boost::posix_time::to_simple_string(
-                     boost::posix_time::from_time_t(message.timestamp()))
+                     boost::posix_time::from_time_t(message_info.timestamp()))
               << std::endl;
-    std::cout << message.sender().user_id() << std::endl;
-    switch (message.message().message_type()) {
+    std::cout << message_info.sender().user_id() << std::endl;
+    switch (message_info.message().message_type()) {
       case huzch::MessageType::STRING:
-        std::cout << message.message().string_message().content() << std::endl;
+        std::cout << message_info.message().string_message().content()
+                  << std::endl;
         break;
       case huzch::MessageType::SPEECH:
-        std::cout << message.message().speech_message().file_content()
+        std::cout << message_info.message().speech_message().file_content()
                   << std::endl;
         break;
       case huzch::MessageType::IMAGE:
-        std::cout << message.message().image_message().file_content()
+        std::cout << message_info.message().image_message().file_content()
                   << std::endl;
         break;
       case huzch::MessageType::FILE:
-        std::cout << message.message().file_message().file_name() << std::endl;
-        std::cout << message.message().file_message().file_content()
+        std::cout << message_info.message().file_message().file_name()
+                  << std::endl;
+        std::cout << message_info.message().file_message().file_content()
                   << std::endl;
         break;
       default:
@@ -81,28 +83,30 @@ TEST(get_test, recent_message) {
   ASSERT_FALSE(ctrl.Failed());
   ASSERT_TRUE(rsp.success());
 
-  for (const auto& message : rsp.messages()) {
-    std::cout << message.message_id() << std::endl;
-    std::cout << message.chat_session_id() << std::endl;
+  for (const auto& message_info : rsp.messages_info()) {
+    std::cout << message_info.message_id() << std::endl;
+    std::cout << message_info.chat_session_id() << std::endl;
     std::cout << boost::posix_time::to_simple_string(
-                     boost::posix_time::from_time_t(message.timestamp()))
+                     boost::posix_time::from_time_t(message_info.timestamp()))
               << std::endl;
-    std::cout << message.sender().user_id() << std::endl;
-    switch (message.message().message_type()) {
+    std::cout << message_info.sender().user_id() << std::endl;
+    switch (message_info.message().message_type()) {
       case huzch::MessageType::STRING:
-        std::cout << message.message().string_message().content() << std::endl;
+        std::cout << message_info.message().string_message().content()
+                  << std::endl;
         break;
       case huzch::MessageType::SPEECH:
-        std::cout << message.message().speech_message().file_content()
+        std::cout << message_info.message().speech_message().file_content()
                   << std::endl;
         break;
       case huzch::MessageType::IMAGE:
-        std::cout << message.message().image_message().file_content()
+        std::cout << message_info.message().image_message().file_content()
                   << std::endl;
         break;
       case huzch::MessageType::FILE:
-        std::cout << message.message().file_message().file_name() << std::endl;
-        std::cout << message.message().file_message().file_content()
+        std::cout << message_info.message().file_message().file_name()
+                  << std::endl;
+        std::cout << message_info.message().file_message().file_content()
                   << std::endl;
         break;
       default:
@@ -125,14 +129,14 @@ TEST(get_test, search_message) {
   ASSERT_FALSE(ctrl.Failed());
   ASSERT_TRUE(rsp.success());
 
-  for (const auto& message : rsp.messages()) {
-    std::cout << message.message_id() << std::endl;
-    std::cout << message.chat_session_id() << std::endl;
+  for (const auto& message_info : rsp.messages_info()) {
+    std::cout << message_info.message_id() << std::endl;
+    std::cout << message_info.chat_session_id() << std::endl;
     std::cout << boost::posix_time::to_simple_string(
-                     boost::posix_time::from_time_t(message.timestamp()))
+                     boost::posix_time::from_time_t(message_info.timestamp()))
               << std::endl;
-    std::cout << message.sender().user_id() << std::endl;
-    std::cout << message.message().string_message().content() << std::endl;
+    std::cout << message_info.sender().user_id() << std::endl;
+    std::cout << message_info.message().string_message().content() << std::endl;
   }
 }
 

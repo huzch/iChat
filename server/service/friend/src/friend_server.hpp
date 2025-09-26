@@ -18,13 +18,11 @@ namespace huzch {
 
 class FriendServiceImpl : public FriendService {
  public:
-  FriendServiceImpl(const std::shared_ptr<elasticlient::Client>& es_client,
-                    const std::shared_ptr<odb::core::database>& mysql_client,
+  FriendServiceImpl(const std::shared_ptr<odb::core::database>& mysql_client,
                     const std::string& user_service_name,
                     const std::string& message_service_name,
                     const ServiceManager::Ptr& service_manager)
-      : _es_user(std::make_shared<ESUser>(es_client)),
-        _mysql_session(std::make_shared<SessionTable>(mysql_client)),
+      : _mysql_session(std::make_shared<SessionTable>(mysql_client)),
         _mysql_session_member(
             std::make_shared<SessionMemberTable>(mysql_client)),
         _mysql_relation(std::make_shared<RelationTable>(mysql_client)),
@@ -441,7 +439,6 @@ class FriendServiceImpl : public FriendService {
   }
 
  private:
-  ESUser::Ptr _es_user;
   SessionTable::Ptr _mysql_session;
   SessionMemberTable::Ptr _mysql_session_member;
   RelationTable::Ptr _mysql_relation;
@@ -495,10 +492,6 @@ class FriendServerBuilder {
         registry_host, base_dir, put_cb, del_cb);
   }
 
-  void init_es_client(const std::vector<std::string>& host_list) {
-    _es_client = ESClientFactory::create(host_list);
-  }
-
   void init_mysql_client(const std::string& user, const std::string& passwd,
                          const std::string& db, const std::string& host,
                          size_t port, const std::string& charset,
@@ -508,11 +501,6 @@ class FriendServerBuilder {
   }
 
   void init_rpc_server(int port, int timeout, int num_threads) {
-    if (!_es_client) {
-      LOG_ERROR("未初始化es搜索引擎模块");
-      abort();
-    }
-
     if (!_mysql_client) {
       LOG_ERROR("未初始化mysql数据库模块");
       abort();
@@ -520,7 +508,7 @@ class FriendServerBuilder {
 
     _server = std::make_shared<brpc::Server>();
     auto friend_service =
-        new FriendServiceImpl(_es_client, _mysql_client, _user_service_name,
+        new FriendServiceImpl(_mysql_client, _user_service_name,
                               _message_service_name, _service_manager);
     int ret = _server->AddService(friend_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
@@ -562,7 +550,6 @@ class FriendServerBuilder {
  private:
   ServiceRegistry::Ptr _registry_client;
   ServiceDiscovery::Ptr _discovery_client;
-  std::shared_ptr<elasticlient::Client> _es_client;
   std::shared_ptr<odb::core::database> _mysql_client;
   std::shared_ptr<brpc::Server> _server;
 

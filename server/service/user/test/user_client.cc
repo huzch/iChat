@@ -91,30 +91,52 @@ huzch::UserInfo user_info;
 //   ASSERT_EQ(rsp.user_info().avatar(), user_info.avatar());
 // }
 
-TEST(get_test, get_multi_user_info) {
+// TEST(get_test, get_multi_user_info) {
+//   huzch::UserService_Stub stub(channel.get());
+//   brpc::Controller ctrl;
+//   huzch::GetMultiUserInfoReq req;
+//   req.set_request_id(huzch::uuid());
+//   req.add_users_id("1fe9a0b8d11a0000");
+//   req.add_users_id("cb40be03c9f00000");
+//   huzch::GetMultiUserInfoRsp rsp;
+
+//   stub.GetMultiUserInfo(&ctrl, &req, &rsp, nullptr);
+//   ASSERT_FALSE(ctrl.Failed());
+//   ASSERT_TRUE(rsp.success());
+//   auto map = rsp.users_info();
+
+//   auto user1 = map["1fe9a0b8d11a0000"];
+//   ASSERT_EQ(user1.user_id(), "1fe9a0b8d11a0000");
+//   ASSERT_EQ(user1.name(), "zhangsan");
+//   ASSERT_EQ(user1.description(), "life is a game!");
+
+//   auto user2 = map["cb40be03c9f00000"];
+//   ASSERT_EQ(user2.user_id(), "cb40be03c9f00000");
+//   ASSERT_EQ(user2.name(), "lisi");
+//   ASSERT_EQ(user2.description(), "life is a game!");
+//   // ASSERT_EQ(user2.avatar(), "这是一个帅气的头像");
+// }
+
+TEST(search_test, search_user_info) {
   huzch::UserService_Stub stub(channel.get());
   brpc::Controller ctrl;
-  huzch::GetMultiUserInfoReq req;
+  huzch::UserSearchReq req;
   req.set_request_id(huzch::uuid());
-  req.add_users_id("1fe9a0b8d11a0000");
-  req.add_users_id("cb40be03c9f00000");
-  huzch::GetMultiUserInfoRsp rsp;
+  req.set_search_key("lisi");
+  req.set_user_id("d13c040f2fe60000");
+  huzch::UserSearchRsp rsp;
 
-  stub.GetMultiUserInfo(&ctrl, &req, &rsp, nullptr);
+  stub.UserSearch(&ctrl, &req, &rsp, nullptr);
   ASSERT_FALSE(ctrl.Failed());
   ASSERT_TRUE(rsp.success());
-  auto map = rsp.users_info();
 
-  auto user1 = map["1fe9a0b8d11a0000"];
-  ASSERT_EQ(user1.user_id(), "1fe9a0b8d11a0000");
-  ASSERT_EQ(user1.name(), "zhangsan");
-  ASSERT_EQ(user1.description(), "life is a game!");
-
-  auto user2 = map["cb40be03c9f00000"];
-  ASSERT_EQ(user2.user_id(), "cb40be03c9f00000");
-  ASSERT_EQ(user2.name(), "lisi");
-  ASSERT_EQ(user2.description(), "life is a game!");
-  // ASSERT_EQ(user2.avatar(), "这是一个帅气的头像");
+  for (auto& user_info : rsp.users_info()) {
+    std::cout << user_info.user_id() << std::endl;
+    std::cout << user_info.name() << std::endl;
+    std::cout << user_info.phone() << std::endl;
+    std::cout << user_info.description() << std::endl;
+    std::cout << user_info.avatar() << std::endl;
+  }
 }
 
 // TEST(set_test, set_name) {

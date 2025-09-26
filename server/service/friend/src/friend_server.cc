@@ -14,8 +14,6 @@ DEFINE_string(friend_service_name, "/friend_service", "好友服务名");
 DEFINE_string(instance_name, "/instance", "实例名");
 DEFINE_string(friend_service_host, "127.0.0.1:10006", "好友服务实例访问地址");
 
-DEFINE_string(es_host, "http://127.0.0.1:9200/", "es搜索引擎服务器地址");
-
 DEFINE_string(mysql_host, "127.0.0.1", "mysql服务器地址");
 DEFINE_string(mysql_user, "root", "mysql服务器用户名");
 DEFINE_string(mysql_passwd, "123@HUzcxbcxzxb", "mysql服务器密码");
@@ -44,9 +42,6 @@ int main(int argc, char* argv[]) {
   fsb.init_discovery_client(FLAGS_registry_host, FLAGS_base_dir,
                             FLAGS_user_service_name,
                             FLAGS_message_service_name);
-
-  // 初始化es搜索引擎
-  fsb.init_es_client({FLAGS_es_host});
 
   // 初始化mysql数据库
   fsb.init_mysql_client(FLAGS_mysql_user, FLAGS_mysql_passwd, FLAGS_mysql_db,
