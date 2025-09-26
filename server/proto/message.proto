@@ -36,10 +36,10 @@ message GetRecentMessageRsp {
 
 message MessageSearchReq {
     string request_id = 1;
-    optional string user_id = 2;
-    optional string login_session_id = 3;
-    string chat_session_id = 4;
-    string search_key = 5;
+    string search_key = 2;
+    string chat_session_id = 3;
+    optional string user_id = 4;
+    optional string login_session_id = 5;
 }
 message MessageSearchRsp {
     string request_id = 1;

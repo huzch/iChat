@@ -21,9 +21,9 @@ message GetFriendListRsp {
 message FriendRemoveReq {
     string request_id = 1;
     string user_id = 2;
-    optional string login_session_id = 3;
-    string peer_id = 4;
-    string chat_session_id = 5;
+    string peer_id = 3;
+    string chat_session_id = 4;
+    optional string login_session_id = 5;
 }
 message FriendRemoveRsp {
     string request_id = 1;
@@ -34,9 +34,9 @@ message FriendRemoveRsp {
 //发送好友申请
 message FriendAddSendReq {
     string request_id = 1;
-    optional string login_session_id = 2;
-    string user_id = 3;
-    string respondent_id = 4;
+    string user_id = 2;
+    string respondent_id = 3;
+    optional string login_session_id = 4;
 }
 message FriendAddSendRsp {
     string request_id = 1;
@@ -49,21 +49,21 @@ message FriendAddProcessReq {
     string request_id = 1;
     bool agree = 2;
     string requester_id = 3;
-    optional string login_session_id = 4;
-    string user_id = 5;
+    string user_id = 4;
+    optional string login_session_id = 5;
 }
 message FriendAddProcessRsp {
     string request_id = 1;
     bool success = 2;
     optional string errmsg = 3;
-    string chat_session_id = 4;
+    optional string chat_session_id = 4;
 }
 
 //获取申请好友者列表
 message GetRequesterListReq {
     string request_id = 1;
-    optional string login_session_id = 2;
-    string user_id = 3;
+    string user_id = 2;
+    optional string login_session_id = 3;
 }
 message GetRequesterListRsp {
     string request_id = 1;
@@ -75,8 +75,8 @@ message GetRequesterListRsp {
 //会话列表获取
 message GetChatSessionListReq {
     string request_id = 1;
-    optional string login_session_id = 2;
-    string user_id = 3;
+    string user_id = 2;
+    optional string login_session_id = 3;
 }
 message GetChatSessionListRsp {
     string request_id = 1;
@@ -88,24 +88,24 @@ message GetChatSessionListRsp {
 //创建会话
 message ChatSessionCreateReq {
     string request_id = 1;
-    optional string login_session_id = 2;
+    string chat_session_name = 2;
     optional string user_id = 3;
-    string chat_session_name = 4;
+    optional string login_session_id = 4;
     repeated string members_id = 5;
 }
 message ChatSessionCreateRsp {
     string request_id = 1;
     bool success = 2;
     optional string errmsg = 3;
-    optional ChatSessionInfo chat_session_info = 4; 
+    ChatSessionInfo chat_session_info = 4; 
 }
 
 //获取会话成员列表
 message GetChatSessionMemberReq {
     string request_id = 1;
-    optional string login_session_id = 2;
+    string chat_session_id = 2;
     optional string user_id = 3;
-    string chat_session_id = 4;
+    optional string login_session_id = 4;
 }
 message GetChatSessionMemberRsp {
     string request_id = 1;

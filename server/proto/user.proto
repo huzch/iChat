@@ -36,8 +36,8 @@ message GetPhoneVerifyCodeReq {
 message GetPhoneVerifyCodeRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3;
-    string verify_code_id = 4;
+    optional string errmsg = 3;
+    optional string verify_code_id = 4;
 }
 
 //手机号注册
@@ -50,7 +50,7 @@ message PhoneRegisterReq {
 message PhoneRegisterRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3;
+    optional string errmsg = 3;
 }
 
 //手机号登录
@@ -63,20 +63,20 @@ message PhoneLoginReq {
 message PhoneLoginRsp {
     string request_id = 1;
     bool success = 2;
-    string errmsg = 3; 
-    string login_session_id = 4;
+    optional string errmsg = 3; 
+    optional string login_session_id = 4;
 }
 
 message GetUserInfoReq {
     string request_id = 1;
-    optional string user_id = 2;
-    optional string session_id = 3;
+    string user_id = 2;
+    optional string login_session_id = 3;
 }
 message GetUserInfoRsp {
     string request_id = 1;
     bool success = 2;
     optional string errmsg = 3; 
-    UserInfo user_info = 4;
+    optional UserInfo user_info = 4;
 }
 
 message GetMultiUserInfoReq {
@@ -94,8 +94,8 @@ message GetMultiUserInfoRsp {
 message UserSearchReq {
     string request_id = 1;
     string search_key = 2;
-    optional string login_session_id = 3;
-    string user_id = 4;
+    string user_id = 3;
+    optional string login_session_id = 4;
 }
 message UserSearchRsp {
     string request_id = 1;
@@ -107,7 +107,7 @@ message UserSearchRsp {
 //用户头像修改 
 message SetUserAvatarReq {
     string request_id = 1;
-    optional string user_id = 2;
+    string user_id = 2;
     optional string login_session_id = 3;
     bytes avatar = 4;
 }
@@ -120,9 +120,9 @@ message SetUserAvatarRsp {
 //用户昵称修改 
 message SetUserNameReq {
     string request_id = 1;
-    optional string user_id = 2;
-    optional string login_session_id = 3;
-    string user_name = 4;
+    string user_id = 2;
+    string user_name = 3;
+    optional string login_session_id = 4;
 }
 message SetUserNameRsp {
     string request_id = 1;
@@ -133,9 +133,9 @@ message SetUserNameRsp {
 //用户签名修改 
 message SetUserDescriptionReq {
     string request_id = 1;
-    optional string user_id = 2;
-    optional string login_session_id = 3;
-    string description = 4;
+    string user_id = 2;
+    string description = 3;
+    optional string login_session_id = 4;
 }
 message SetUserDescriptionRsp {
     string request_id = 1;
@@ -146,11 +146,11 @@ message SetUserDescriptionRsp {
 //用户手机修改 
 message SetUserPhoneNumberReq {
     string request_id = 1;
-    optional string user_id = 2;
-    optional string login_session_id = 3;
-    string phone_number = 4;
-    string phone_verify_code_id = 5;
-    string phone_verify_code = 6;
+    string user_id = 2;
+    string phone_number = 3;
+    string phone_verify_code_id = 4;
+    string phone_verify_code = 5;
+    optional string login_session_id = 6;
 }
 message SetUserPhoneNumberRsp {
     string request_id = 1;

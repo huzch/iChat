@@ -6,9 +6,9 @@ option cc_generic_services = true;
 
 message NewMessageReq {
     string request_id = 1;
-    optional string user_id = 2;
-    optional string login_session_id = 3;
-    string chat_session_id = 4;
+    string user_id = 2;
+    string chat_session_id = 3;
+    optional string login_session_id = 4;
     MessageContent message = 5;
 }
 message NewMessageRsp {

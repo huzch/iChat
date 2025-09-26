@@ -96,11 +96,11 @@ class ServiceManager {
     }
 
     ServiceChannel::Ptr service;
-    if (!_service_ptr_map.count(service_name)) {
+    if (!_service_channel_map.count(service_name)) {
       service = std::make_shared<ServiceChannel>(service_name);
-      _service_ptr_map[service_name] = service;
+      _service_channel_map[service_name] = service;
     } else {
-      service = _service_ptr_map[service_name];
+      service = _service_channel_map[service_name];
     }
     lock.unlock();
 
@@ -119,11 +119,11 @@ class ServiceManager {
     }
 
     ServiceChannel::Ptr service;
-    if (!_service_ptr_map.count(service_name)) {
+    if (!_service_channel_map.count(service_name)) {
       LOG_WARN("{} 服务下线节点: {} 时，未找到管理对象", service_name, host);
       return;
     } else {
-      service = _service_ptr_map[service_name];
+      service = _service_channel_map[service_name];
     }
     lock.unlock();
 
@@ -133,11 +133,11 @@ class ServiceManager {
 
   ServiceChannel::ChannelPtr get(const std::string& service_name) {
     std::lock_guard<std::mutex> lock(_mutex);
-    if (!_service_ptr_map.count(service_name)) {
+    if (!_service_channel_map.count(service_name)) {
       LOG_ERROR("当前没有 {} 服务节点", service_name);
       return ServiceChannel::ChannelPtr();
     }
-    return _service_ptr_map[service_name]->get();
+    return _service_channel_map[service_name]->get();
   }
 
  private:
@@ -148,7 +148,7 @@ class ServiceManager {
 
  private:
   std::unordered_set<std::string> _services;  // 关心的服务
-  std::unordered_map<std::string, ServiceChannel::Ptr> _service_ptr_map;
+  std::unordered_map<std::string, ServiceChannel::Ptr> _service_channel_map;
   std::mutex _mutex;
 };
 
