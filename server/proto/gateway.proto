@@ -1,0 +1,12 @@
+syntax = "proto3";
+package huzch;
+option cc_generic_services = true;
+
+message ClientAuthenticationReq {
+    string request_id = 1;
+    string session_id = 2; // 用于向服务器表明当前长连接客户端的身份
+}
+
+//在客户端与网关服务器的通信中，使用HTTP协议进行通信
+//  通信时采用POST请求作为请求方法
+//  通信时，正文采用protobuf作为正文协议格式，具体内容字段以前边各个文件中定义的字段格式为准
