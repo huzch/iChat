@@ -19,7 +19,7 @@ DEFINE_string(es_host, "http://127.0.0.1:9200/", "es搜索引擎服务器地址"
 
 DEFINE_string(mysql_host, "127.0.0.1", "mysql服务器地址");
 DEFINE_string(mysql_user, "root", "mysql服务器用户名");
-DEFINE_string(mysql_passwd, "123@HUzcxbcxzxb", "mysql服务器密码");
+DEFINE_string(mysql_passwd, "123456", "mysql服务器密码");
 DEFINE_string(mysql_db, "huzch", "mysql默认库名");
 DEFINE_string(mysql_charset, "utf8", "mysql客户端字符集");
 DEFINE_int32(mysql_port, 0, "mysql服务器端口");

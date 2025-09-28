@@ -76,7 +76,7 @@ message GetUserInfoRsp {
     string request_id = 1;
     bool success = 2;
     optional string errmsg = 3; 
-    optional UserInfo user_info = 4;
+    UserInfo user_info = 4;
 }
 
 message GetMultiUserInfoReq {

@@ -15,13 +15,13 @@ DEFINE_string(forward_service_host, "127.0.0.1:10004", "转发服务实例访问
 
 DEFINE_string(mq_host, "127.0.0.1:5672", "rabbitmq服务器地址");
 DEFINE_string(mq_user, "root", "rabbitmq服务器用户名");
-DEFINE_string(mq_passwd, "123HUzcxbcxzxb", "rabbitmq服务器密码");
+DEFINE_string(mq_passwd, "123456", "rabbitmq服务器密码");
 DEFINE_string(mq_exchange, "msg_exchange", "持久化消息发布交换机名");
 DEFINE_string(mq_queue, "msg_queue", "持久化消息发布队列名");
 
 DEFINE_string(mysql_host, "127.0.0.1", "mysql服务器地址");
 DEFINE_string(mysql_user, "root", "mysql服务器用户名");
-DEFINE_string(mysql_passwd, "123@HUzcxbcxzxb", "mysql服务器密码");
+DEFINE_string(mysql_passwd, "123456", "mysql服务器密码");
 DEFINE_string(mysql_db, "huzch", "mysql默认库名");
 DEFINE_string(mysql_charset, "utf8", "mysql客户端字符集");
 DEFINE_int32(mysql_port, 0, "mysql服务器端口");
