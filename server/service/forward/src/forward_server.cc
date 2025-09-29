@@ -18,6 +18,7 @@ DEFINE_string(mq_user, "root", "rabbitmq服务器用户名");
 DEFINE_string(mq_passwd, "123456", "rabbitmq服务器密码");
 DEFINE_string(mq_exchange, "msg_exchange", "持久化消息发布交换机名");
 DEFINE_string(mq_queue, "msg_queue", "持久化消息发布队列名");
+DEFINE_string(mq_routing_key, "msg_queue", "持久化消息发布路由键");
 
 DEFINE_string(mysql_host, "127.0.0.1", "mysql服务器地址");
 DEFINE_string(mysql_user, "root", "mysql服务器用户名");
@@ -49,7 +50,7 @@ int main(int argc, char* argv[]) {
 
   // 初始化rabbitmq消息队列
   fsb.init_mq_client(FLAGS_mq_user, FLAGS_mq_passwd, FLAGS_mq_host,
-                     FLAGS_mq_exchange, FLAGS_mq_queue);
+                     FLAGS_mq_exchange, FLAGS_mq_queue, FLAGS_mq_routing_key);
 
   // 初始化mysql数据库
   fsb.init_mysql_client(FLAGS_mysql_user, FLAGS_mysql_passwd, FLAGS_mysql_db,

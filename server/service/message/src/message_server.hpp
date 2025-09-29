@@ -5,7 +5,7 @@
 #include "channel.hpp"
 #include "data_mysql_message.hpp"
 #include "data_search.hpp"
-#include "etcd.hpp"
+#include "registry.hpp"
 #include "file.pb.h"
 #include "message.pb.h"
 #include "mq.hpp"
@@ -493,10 +493,10 @@ class MessageServerBuilder {
 
   void init_mq_client(const std::string& user, const std::string& passwd,
                       const std::string& host, const std::string& exchange,
-                      const std::string& queue) {
+                      const std::string& queue, const std::string& routing_key) {
     _queue_name = queue;
     _mq_client = std::make_shared<MQClient>(user, passwd, host);
-    _mq_client->declare(exchange, queue);
+    _mq_client->declare(exchange, queue, routing_key);
   }
 
   void init_es_client(const std::vector<std::string>& hosts) {

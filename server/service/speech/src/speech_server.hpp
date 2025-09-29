@@ -2,7 +2,7 @@
 #include <brpc/server.h>
 
 #include "asr.hpp"
-#include "etcd.hpp"
+#include "registry.hpp"
 #include "speech.pb.h"
 
 namespace huzch {

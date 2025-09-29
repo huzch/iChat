@@ -4,7 +4,7 @@
 #include "base.pb.h"
 #include "channel.hpp"
 #include "data_mysql_session_member.hpp"
-#include "etcd.hpp"
+#include "registry.hpp"
 #include "forward.pb.h"
 #include "mq.hpp"
 #include "user.pb.h"
@@ -139,10 +139,10 @@ class ForwardServerBuilder {
 
   void init_mq_client(const std::string& user, const std::string& passwd,
                       const std::string& host, const std::string& exchange,
-                      const std::string& queue) {
+                      const std::string& queue, const std::string& routing_key) {
     _exchange_name = exchange;
     _mq_client = std::make_shared<MQClient>(user, passwd, host);
-    _mq_client->declare(exchange, queue);
+    _mq_client->declare(exchange, queue, routing_key);
   }
 
   void init_mysql_client(const std::string& user, const std::string& passwd,

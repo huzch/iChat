@@ -4,7 +4,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "channel.hpp"
-#include "etcd.hpp"
+#include "registry.hpp"
 #include "message.pb.h"
 #include "utils.hpp"
 

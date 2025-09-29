@@ -6,17 +6,17 @@ DEFINE_bool(run_mode, true, "程序运行模式: true调试/false发布");
 DEFINE_string(log_file, "", "发布模式下日志文件");
 DEFINE_int32(log_level, 0, "发布模式下日志等级");
 
-DEFINE_string(asr_app_id, "119899216", "语音识别平台应用id");
-DEFINE_string(asr_api_key, "pri3F79iHqXUU6JST535oOR7", "语音识别平台api密钥");
-DEFINE_string(asr_secret_key, "2priN4V38gvixRX8R25N16q33uGoS8wg",
-              "语音识别平台加密密钥");
-
 DEFINE_string(registry_host, "http://127.0.0.1:2379", "etcd服务器地址");
 DEFINE_string(base_dir, "/service", "服务根目录");
 DEFINE_string(speech_service_name, "/speech_service", "语音识别服务名");
 DEFINE_string(instance_name, "/instance", "实例名");
 DEFINE_string(speech_service_host, "127.0.0.1:10001",
               "语音识别服务实例访问地址");
+
+DEFINE_string(asr_app_id, "119899216", "语音识别平台应用id");
+DEFINE_string(asr_api_key, "pri3F79iHqXUU6JST535oOR7", "语音识别平台api密钥");
+DEFINE_string(asr_secret_key, "2priN4V38gvixRX8R25N16q33uGoS8wg",
+              "语音识别平台加密密钥");
 
 DEFINE_int32(rpc_port, 10001, "rpc服务器监听端口");
 DEFINE_int32(rpc_timeout, -1, "rpc调用超时时间");

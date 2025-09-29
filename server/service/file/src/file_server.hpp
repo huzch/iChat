@@ -2,7 +2,7 @@
 #include <brpc/server.h>
 
 #include "base.pb.h"
-#include "etcd.hpp"
+#include "registry.hpp"
 #include "file.pb.h"
 #include "utils.hpp"
 

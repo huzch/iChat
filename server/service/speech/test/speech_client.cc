@@ -2,7 +2,7 @@
 
 #include "asr.hpp"
 #include "channel.hpp"
-#include "etcd.hpp"
+#include "registry.hpp"
 #include "speech.pb.h"
 
 DEFINE_bool(run_mode, true, "程序运行模式: true调试/false发布");

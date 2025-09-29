@@ -4,7 +4,7 @@
 #include "channel.hpp"
 #include "connection.hpp"
 #include "data_redis.hpp"
-#include "etcd.hpp"
+#include "registry.hpp"
 #include "file.pb.h"
 #include "forward.pb.h"
 #include "friend.pb.h"

@@ -3,7 +3,7 @@
 
 #include "base.pb.h"
 #include "channel.hpp"
-#include "etcd.hpp"
+#include "registry.hpp"
 #include "user.pb.h"
 #include "utils.hpp"
 

@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "channel.hpp"
-#include "etcd.hpp"
+#include "registry.hpp"
 #include "friend.pb.h"
 #include "utils.hpp"
 

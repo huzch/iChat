@@ -19,6 +19,7 @@ DEFINE_string(mq_user, "root", "rabbitmq服务器用户名");
 DEFINE_string(mq_passwd, "123456", "rabbitmq服务器密码");
 DEFINE_string(mq_exchange, "msg_exchange", "持久化消息发布交换机名");
 DEFINE_string(mq_queue, "msg_queue", "持久化消息发布队列名");
+DEFINE_string(mq_routing_key, "msg_queue", "持久化消息发布路由键");
 
 DEFINE_string(es_host, "http://127.0.0.1:9200/", "es搜索引擎服务器地址");
 
@@ -52,7 +53,7 @@ int main(int argc, char* argv[]) {
 
   // 初始化rabbitmq消息队列
   msb.init_mq_client(FLAGS_mq_user, FLAGS_mq_passwd, FLAGS_mq_host,
-                     FLAGS_mq_exchange, FLAGS_mq_queue);
+                     FLAGS_mq_exchange, FLAGS_mq_queue, FLAGS_mq_routing_key);
 
   // 初始化es搜索引擎
   msb.init_es_client({FLAGS_es_host});

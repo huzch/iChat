@@ -8,7 +8,7 @@
 #include "data_mysql_session.hpp"
 #include "data_mysql_session_member.hpp"
 #include "data_search.hpp"
-#include "etcd.hpp"
+#include "registry.hpp"
 #include "friend.pb.h"
 #include "message.pb.h"
 #include "user.pb.h"

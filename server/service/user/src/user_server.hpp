@@ -6,7 +6,7 @@
 #include "data_mysql_user.hpp"
 #include "data_redis.hpp"
 #include "data_search.hpp"
-#include "etcd.hpp"
+#include "registry.hpp"
 #include "file.pb.h"
 #include "sms.hpp"
 #include "user.pb.h"
