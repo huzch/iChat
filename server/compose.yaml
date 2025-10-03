@@ -1,0 +1,165 @@
+services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.3.25
+    container_name: etcd_service
+    environment:
+      ETCD_NAME: etcd-s1
+      ETCD_DATA_DIR: /var/lib/etcd
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://0.0.0.0:2379
+    volumes:
+      - ./data/etcd:/var/lib/etcd:rw
+    ports:
+      - 2379:2379
+    restart: always
+  mysql:
+    image: mysql:8.0.43
+    container_name: mysql_service
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+    volumes:
+      - ./sql:/docker-entrypoint-initdb.d:rw
+      - ./data/mysql:/var/lib/mysql:rw
+    ports:
+      - 3306:3306
+    restart: always
+  redis:
+    image: redis:6.0.16
+    container_name: redis_service
+    volumes:
+      - ./data/redis:/var/lib/redis:rw
+    ports:
+      - 6379:6379
+    restart: always
+  elasticsearch:
+    image: elasticsearch:7.17.21
+    container_name: elasticsearch_service
+    environment:
+      discovery.type: single-node
+    volumes:
+      - ./data/elasticsearch:/var/lib/elasticsearch:rw
+    ports:
+      - 9200:9200
+    restart: always
+  rabbitmq:
+    image: rabbitmq:3.9.27
+    container_name: rabbitmq_service
+    environment:
+      RABBITMQ_DEFAULT_USER: root
+      RABBITMQ_DEFAULT_PASS: 123456
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq:rw
+    ports:
+      - 5672:5672
+    restart: always
+  speech:
+    build: ./speech
+    container_name: speech_service
+    volumes:
+      - ./data/log:/iChat/log:rw
+      - ./conf/speech_server.conf:/iChat/conf/speech_server.conf
+      - ./script/entrypoint.sh:/iChat/bin/entrypoint.sh
+    ports:
+      - 10001:10001
+    restart: always
+    depends_on:
+      - etcd
+    entrypoint:
+      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379 -c "/iChat/bin/speech_server -flagfile=/iChat/conf/speech_server.conf"
+  file:
+    build: ./file
+    container_name: file_service
+    volumes:
+      - ./data/log:/iChat/log:rw
+      - ./data/data:/iChat/data:rw
+      - ./conf/file_server.conf:/iChat/conf/file_server.conf
+      - ./script/entrypoint.sh:/iChat/bin/entrypoint.sh
+    ports:
+      - 10002:10002
+    restart: always
+    depends_on:
+      - etcd
+    entrypoint:
+      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379 -c "/iChat/bin/file_server -flagfile=/iChat/conf/file_server.conf"
+  user:
+    build: ./user
+    container_name: user_service
+    volumes:
+      - ./data/log:/iChat/log:rw
+      - ./conf/user_server.conf:/iChat/conf/user_server.conf
+      - ./script/entrypoint.sh:/iChat/bin/entrypoint.sh
+    ports:
+      - 10003:10003
+    restart: always
+    depends_on:
+      - etcd
+      - mysql
+      - redis
+      - elasticsearch
+    entrypoint:
+      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379,3306,6379,9200 -c "/iChat/bin/user_server -flagfile=/iChat/conf/user_server.conf"
+  forward:
+    build: ./forward
+    container_name: forward_service
+    volumes:
+      - ./data/log:/iChat/log:rw
+      - ./conf/forward_server.conf:/iChat/conf/forward_server.conf
+      - ./script/entrypoint.sh:/iChat/bin/entrypoint.sh
+    ports:
+      - 10004:10004
+    restart: always
+    depends_on:
+      - etcd
+      - mysql
+      - rabbitmq
+    entrypoint:
+      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379,3306,5672 -c "/iChat/bin/forward_server -flagfile=/iChat/conf/forward_server.conf"
+  message:
+    build: ./message
+    container_name: message_service
+    volumes:
+      - ./data/log:/iChat/log:rw
+      - ./conf/message_server.conf:/iChat/conf/message_server.conf
+      - ./script/entrypoint.sh:/iChat/bin/entrypoint.sh
+    ports:
+      - 10005:10005
+    restart: always
+    depends_on:
+      - etcd
+      - mysql
+      - elasticsearch
+      - rabbitmq
+    entrypoint:
+      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379,3306,9200,5672 -c "/iChat/bin/message_server -flagfile=/iChat/conf/message_server.conf"
+  friend:
+    build: ./friend
+    container_name: friend_service
+    volumes:
+      - ./data/log:/iChat/log:rw
+      - ./conf/friend_server.conf:/iChat/conf/friend_server.conf
+      - ./script/entrypoint.sh:/iChat/bin/entrypoint.sh
+    ports:
+      - 10006:10006
+    restart: always
+    depends_on:
+      - etcd
+      - mysql
+      - elasticsearch
+    entrypoint:
+      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379,3306,9200 -c "/iChat/bin/friend_server -flagfile=/iChat/conf/friend_server.conf"
+  gateway:
+    build: ./gateway
+    container_name: gateway_service
+    volumes:
+      - ./data/log:/iChat/log:rw
+      - ./conf/gateway_server.conf:/iChat/conf/gateway_server.conf
+      - ./script/entrypoint.sh:/iChat/bin/entrypoint.sh
+    ports:
+      - 9000:9000
+      - 9001:9001
+    restart: always
+    depends_on:
+      - etcd
+      - redis
+    entrypoint:
+      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379,6379 -c "/iChat/bin/gateway_server -flagfile=/iChat/conf/gateway_server.conf"
