@@ -46,7 +46,12 @@ class ServiceChannel {
     }
 
     auto it = _host_it_map[host];
-    _channels.erase(it);
+    if (_it == it) {
+      _it = _channels.erase(it);
+    } else {
+      _channels.erase(it);
+    }
+
     _host_it_map.erase(host);
   }
 
