@@ -65,7 +65,7 @@ services:
     depends_on:
       - etcd
     entrypoint:
-      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379 -c "/iChat/bin/speech_server -flagfile=/iChat/conf/speech_server.conf"
+      /iChat/bin/entrypoint.sh -h ${host} -p 2379 -c "/iChat/bin/speech_server -flagfile=/iChat/conf/speech_server.conf"
   file:
     build: ./service/file
     container_name: file_service
@@ -80,7 +80,7 @@ services:
     depends_on:
       - etcd
     entrypoint:
-      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379 -c "/iChat/bin/file_server -flagfile=/iChat/conf/file_server.conf"
+      /iChat/bin/entrypoint.sh -h ${host} -p 2379 -c "/iChat/bin/file_server -flagfile=/iChat/conf/file_server.conf"
   user:
     build: ./service/user
     container_name: user_service
@@ -97,7 +97,7 @@ services:
       - redis
       - elasticsearch
     entrypoint:
-      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379,3306,6379,9200 -c "/iChat/bin/user_server -flagfile=/iChat/conf/user_server.conf"
+      /iChat/bin/entrypoint.sh -h ${host} -p 2379,3306,6379,9200 -c "/iChat/bin/user_server -flagfile=/iChat/conf/user_server.conf"
   forward:
     build: ./service/forward
     container_name: forward_service
@@ -113,7 +113,7 @@ services:
       - mysql
       - rabbitmq
     entrypoint:
-      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379,3306,5672 -c "/iChat/bin/forward_server -flagfile=/iChat/conf/forward_server.conf"
+      /iChat/bin/entrypoint.sh -h ${host} -p 2379,3306,5672 -c "/iChat/bin/forward_server -flagfile=/iChat/conf/forward_server.conf"
   message:
     build: ./service/message
     container_name: message_service
@@ -130,7 +130,7 @@ services:
       - elasticsearch
       - rabbitmq
     entrypoint:
-      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379,3306,9200,5672 -c "/iChat/bin/message_server -flagfile=/iChat/conf/message_server.conf"
+      /iChat/bin/entrypoint.sh -h ${host} -p 2379,3306,9200,5672 -c "/iChat/bin/message_server -flagfile=/iChat/conf/message_server.conf"
   friend:
     build: ./service/friend
     container_name: friend_service
@@ -146,7 +146,7 @@ services:
       - mysql
       - elasticsearch
     entrypoint:
-      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379,3306,9200 -c "/iChat/bin/friend_server -flagfile=/iChat/conf/friend_server.conf"
+      /iChat/bin/entrypoint.sh -h ${host} -p 2379,3306,9200 -c "/iChat/bin/friend_server -flagfile=/iChat/conf/friend_server.conf"
   gateway:
     build: ./service/gateway
     container_name: gateway_service
@@ -162,4 +162,4 @@ services:
       - etcd
       - redis
     entrypoint:
-      /iChat/bin/entrypoint.sh -h 192.168.139.187 -p 2379,6379 -c "/iChat/bin/gateway_server -flagfile=/iChat/conf/gateway_server.conf"
+      /iChat/bin/entrypoint.sh -h ${host} -p 2379,6379 -c "/iChat/bin/gateway_server -flagfile=/iChat/conf/gateway_server.conf"

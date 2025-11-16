@@ -85,12 +85,11 @@ mkdir build && cd build
 cmake ..
 make -j$(nproc)
 
+cd ../script/
 # 拷贝构建产物
-cd ..
-bash script/build.sh
-
+bash build.sh
 # 收集依赖库
-bash script/depend.sh
+bash depend.sh
 ```
 
 ### 配置文件
