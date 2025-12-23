@@ -1,0 +1,64 @@
+syntax = "proto3";
+package huzch;
+import "base.proto";
+
+option cc_generic_services = true;
+
+message GetSingleFileReq {
+    string request_id = 1;
+    string file_id = 2;
+    optional string user_id = 3;
+    optional string login_session_id = 4;
+}
+message GetSingleFileRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3; 
+    optional FileDownloadData file_data = 4;
+}
+
+message GetMultiFileReq {
+    string request_id = 1;
+    optional string user_id = 2;
+    optional string login_session_id = 3;
+    repeated string files_id = 4;
+}
+message GetMultiFileRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3;
+    map<string, FileDownloadData> files_data = 4; // 文件ID与文件数据的映射map
+}
+
+message PutSingleFileReq {
+    string request_id = 1;
+    optional string user_id = 2;
+    optional string login_session_id = 3;
+    FileUploadData file_data = 4;
+}
+message PutSingleFileRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3;
+    optional FileMessageInfo file_info = 4;
+}
+
+message PutMultiFileReq {
+    string request_id = 1;
+    optional string user_id = 2;
+    optional string login_session_id = 3;
+    repeated FileUploadData files_data = 4;
+}
+message PutMultiFileRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3; 
+    repeated FileMessageInfo files_info = 4;
+}
+
+service FileService {
+    rpc GetSingleFile(GetSingleFileReq) returns (GetSingleFileRsp);
+    rpc GetMultiFile(GetMultiFileReq) returns (GetMultiFileRsp);
+    rpc PutSingleFile(PutSingleFileReq) returns (PutSingleFileRsp);
+    rpc PutMultiFile(PutMultiFileReq) returns (PutMultiFileRsp);
+}

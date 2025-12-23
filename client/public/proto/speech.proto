@@ -1,0 +1,22 @@
+syntax = "proto3";
+package huzch;
+
+option cc_generic_services = true;
+
+message SpeechRecognizeReq {
+    string request_id = 1;
+    bytes speech_content = 2;
+    optional string user_id = 3;
+    optional string login_session_id = 4;
+}
+
+message SpeechRecognizeRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3;
+    optional string recognition_result = 4;
+}
+
+service SpeechService {
+    rpc SpeechRecognize(SpeechRecognizeReq) returns (SpeechRecognizeRsp);
+}

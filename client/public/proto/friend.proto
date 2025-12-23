@@ -1,0 +1,126 @@
+syntax = "proto3";
+package huzch;
+import "base.proto";
+
+option cc_generic_services = true;
+
+//获取好友列表
+message GetFriendReq {
+    string request_id = 1;
+    string user_id = 2;
+    optional string login_session_id = 3;
+}
+message GetFriendRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3;
+    repeated UserInfo friends_info = 4;
+}
+
+//好友删除
+message FriendRemoveReq {
+    string request_id = 1;
+    string user_id = 2;
+    string peer_id = 3;
+    string chat_session_id = 4;
+    optional string login_session_id = 5;
+}
+message FriendRemoveRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3;
+}
+
+//发送好友申请
+message FriendAddSendReq {
+    string request_id = 1;
+    string user_id = 2;
+    string respondent_id = 3;
+    optional string login_session_id = 4;
+}
+message FriendAddSendRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3;
+}
+
+//处理好友申请
+message FriendAddProcessReq {
+    string request_id = 1;
+    bool agree = 2;
+    string requester_id = 3;
+    string user_id = 4;
+    optional string login_session_id = 5;
+}
+message FriendAddProcessRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3;
+    optional string chat_session_id = 4;
+}
+
+//获取申请好友者列表
+message GetRequesterReq {
+    string request_id = 1;
+    string user_id = 2;
+    optional string login_session_id = 3;
+}
+message GetRequesterRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3; 
+    repeated UserInfo requesters_info = 4;
+}
+
+//会话列表获取
+message GetChatSessionReq {
+    string request_id = 1;
+    string user_id = 2;
+    optional string login_session_id = 3;
+}
+message GetChatSessionRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3; 
+    repeated ChatSessionInfo chat_sessions_info = 4;
+}
+
+//创建会话
+message ChatSessionCreateReq {
+    string request_id = 1;
+    string chat_session_name = 2;
+    optional string user_id = 3;
+    optional string login_session_id = 4;
+    repeated string members_id = 5;
+}
+message ChatSessionCreateRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3;
+    ChatSessionInfo chat_session_info = 4; 
+}
+
+//获取会话成员列表
+message GetChatSessionMemberReq {
+    string request_id = 1;
+    string chat_session_id = 2;
+    optional string user_id = 3;
+    optional string login_session_id = 4;
+}
+message GetChatSessionMemberRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3; 
+    repeated UserInfo members_info = 4;
+}
+
+service FriendService {
+    rpc GetFriend(GetFriendReq) returns (GetFriendRsp);
+    rpc FriendRemove(FriendRemoveReq) returns (FriendRemoveRsp);
+    rpc FriendAddSend(FriendAddSendReq) returns (FriendAddSendRsp);
+    rpc FriendAddProcess(FriendAddProcessReq) returns (FriendAddProcessRsp);
+    rpc GetRequester(GetRequesterReq) returns (GetRequesterRsp);
+    rpc GetChatSession(GetChatSessionReq) returns (GetChatSessionRsp);
+    rpc ChatSessionCreate(ChatSessionCreateReq) returns (ChatSessionCreateRsp);
+    rpc GetChatSessionMember(GetChatSessionMemberReq) returns (GetChatSessionMemberRsp);
+}

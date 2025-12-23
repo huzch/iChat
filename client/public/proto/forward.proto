@@ -1,0 +1,24 @@
+syntax = "proto3";
+package huzch;
+import "base.proto";
+
+option cc_generic_services = true;
+
+message NewMessageReq {
+    string request_id = 1;
+    string user_id = 2;
+    string chat_session_id = 3;
+    optional string login_session_id = 4;
+    MessageContent message = 5;
+}
+message NewMessageRsp {
+    string request_id = 1;
+    bool success = 2;
+    optional string errmsg = 3; 
+    MessageInfo message_info = 4;
+    repeated string targets_id = 5;
+}
+
+service ForwardService {
+    rpc NewMessage(NewMessageReq) returns (NewMessageRsp);
+}
