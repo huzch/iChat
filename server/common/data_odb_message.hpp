@@ -1,5 +1,5 @@
 #pragma once
-#include "data_mysql.hpp"
+#include "data_odb.hpp"
 #include "logger.hpp"
 #include "message-odb.hxx"
 #include "message.hxx"
@@ -12,12 +12,12 @@ class MessageTable {
 
  public:
   MessageTable(const std::shared_ptr<odb::core::database>& db)
-      : _mysql_client(db) {}
+      : _odb_client(db) {}
 
   bool insert(Message& message) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      _mysql_client->persist(message);
+      odb::transaction t(_odb_client->begin());
+      _odb_client->persist(message);
       t.commit();
     } catch (const std::exception& e) {
       LOG_ERROR("消息 {} 新增失败: {}", message.message_id(), e.what());
@@ -28,8 +28,8 @@ class MessageTable {
 
   bool remove(const std::string& session_id) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      _mysql_client->erase_query<Message>(odb::query<Message>::session_id ==
+      odb::transaction t(_odb_client->begin());
+      _odb_client->erase_query<Message>(odb::query<Message>::session_id ==
                                           session_id);
       t.commit();
     } catch (const std::exception& e) {
@@ -42,13 +42,13 @@ class MessageTable {
   std::vector<Message> recent(const std::string& session_id, size_t count) {
     std::vector<Message> messages;
     try {
-      odb::transaction t(_mysql_client->begin());
+      odb::transaction t(_odb_client->begin());
 
       std::string condition = "session_id='" + session_id +
                               "' order by create_time desc limit " +
                               std::to_string(count);
 
-      auto result = _mysql_client->query<Message>(condition);
+      auto result = _odb_client->query<Message>(condition);
       messages.reserve(result.size());
       for (const auto& message : result) {
         messages.push_back(message);
@@ -68,8 +68,8 @@ class MessageTable {
                              const boost::posix_time::ptime& end_time) {
     std::vector<Message> messages;
     try {
-      odb::transaction t(_mysql_client->begin());
-      auto result = _mysql_client->query<Message>(
+      odb::transaction t(_odb_client->begin());
+      auto result = _odb_client->query<Message>(
           odb::query<Message>::session_id == session_id &&
           odb::query<Message>::create_time >= start_time &&
           odb::query<Message>::create_time <= end_time);
@@ -88,7 +88,7 @@ class MessageTable {
   }
 
  private:
-  std::shared_ptr<odb::core::database> _mysql_client;
+  std::shared_ptr<odb::core::database> _odb_client;
 };
 
 }  // namespace huzch

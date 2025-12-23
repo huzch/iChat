@@ -1,5 +1,5 @@
 #pragma once
-#include "data_mysql.hpp"
+#include "data_odb.hpp"
 #include "logger.hpp"
 #include "user-odb.hxx"
 #include "user.hxx"
@@ -12,12 +12,12 @@ class UserTable {
 
  public:
   UserTable(const std::shared_ptr<odb::core::database>& db)
-      : _mysql_client(db) {}
+      : _odb_client(db) {}
 
   bool insert(const std::shared_ptr<User>& user) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      _mysql_client->persist(*user);
+      odb::transaction t(_odb_client->begin());
+      _odb_client->persist(*user);
       t.commit();
     } catch (const std::exception& e) {
       LOG_ERROR("用户 {} 新增失败: {}", user->name(), e.what());
@@ -28,8 +28,8 @@ class UserTable {
 
   bool update(const std::shared_ptr<User>& user) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      _mysql_client->update(*user);
+      odb::transaction t(_odb_client->begin());
+      _odb_client->update(*user);
       t.commit();
     } catch (const std::exception& e) {
       LOG_ERROR("用户 {} 更新失败: {}", user->name(), e.what());
@@ -40,9 +40,9 @@ class UserTable {
 
   std::shared_ptr<User> select_by_name(const std::string& name) {
     try {
-      odb::transaction t(_mysql_client->begin());
+      odb::transaction t(_odb_client->begin());
       auto user =
-          _mysql_client->query_one<User>(odb::query<User>::name == name);
+          _odb_client->query_one<User>(odb::query<User>::name == name);
       t.commit();
       return std::shared_ptr<User>(user);
     } catch (const std::exception& e) {
@@ -53,9 +53,9 @@ class UserTable {
 
   std::shared_ptr<User> select_by_phone(const std::string& phone) {
     try {
-      odb::transaction t(_mysql_client->begin());
+      odb::transaction t(_odb_client->begin());
       auto user =
-          _mysql_client->query_one<User>(odb::query<User>::phone == phone);
+          _odb_client->query_one<User>(odb::query<User>::phone == phone);
       t.commit();
       return std::shared_ptr<User>(user);
     } catch (const std::exception& e) {
@@ -66,9 +66,9 @@ class UserTable {
 
   std::shared_ptr<User> select_by_id(const std::string& user_id) {
     try {
-      odb::transaction t(_mysql_client->begin());
+      odb::transaction t(_odb_client->begin());
       auto user =
-          _mysql_client->query_one<User>(odb::query<User>::user_id == user_id);
+          _odb_client->query_one<User>(odb::query<User>::user_id == user_id);
       t.commit();
       return std::shared_ptr<User>(user);
     } catch (const std::exception& e) {
@@ -80,8 +80,11 @@ class UserTable {
   std::vector<User> select_by_multi_id(
       const std::vector<std::string>& users_id) {
     std::vector<User> users;
+    if (users_id.empty()) {
+      return users;
+    }
     try {
-      odb::transaction t(_mysql_client->begin());
+      odb::transaction t(_odb_client->begin());
 
       std::string condition = "user_id in (";
       for (const auto& user_id : users_id) {
@@ -91,7 +94,7 @@ class UserTable {
       condition += ")";
       LOG_DEBUG("condition: {}", condition);
 
-      auto result = _mysql_client->query<User>(condition);
+      auto result = _odb_client->query<User>(condition);
       users.reserve(result.size());
       for (const auto& user : result) {
         users.push_back(user);
@@ -104,7 +107,7 @@ class UserTable {
   }
 
  private:
-  std::shared_ptr<odb::core::database> _mysql_client;
+  std::shared_ptr<odb::core::database> _odb_client;
 };
 
 }  // namespace huzch

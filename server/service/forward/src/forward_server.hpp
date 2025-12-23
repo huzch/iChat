@@ -3,7 +3,7 @@
 
 #include "base.pb.h"
 #include "channel.hpp"
-#include "data_mysql_session_member.hpp"
+#include "data_odb_session_member.hpp"
 #include "registry.hpp"
 #include "forward.pb.h"
 #include "mq.hpp"
@@ -14,13 +14,13 @@ namespace huzch {
 
 class ForwardServiceImpl : public ForwardService {
  public:
-  ForwardServiceImpl(const std::shared_ptr<odb::core::database>& mysql_client,
+  ForwardServiceImpl(const std::shared_ptr<odb::core::database>& odb_client,
                      const std::string& exchange_name,
                      const MQClient::Ptr& mq_client,
                      const std::string& user_service_name,
                      const ChannelManager::Ptr& channels)
-      : _mysql_session_member(
-            std::make_shared<SessionMemberTable>(mysql_client)),
+      : _odb_session_member(
+            std::make_shared<SessionMemberTable>(odb_client)),
         _exchange_name(exchange_name),
         _mq_client(mq_client),
         _user_service_name(user_service_name),
@@ -70,7 +70,7 @@ class ForwardServiceImpl : public ForwardService {
     message_info.mutable_sender()->CopyFrom(rsp.user_info());
     message_info.mutable_message()->CopyFrom(content);
 
-    auto members = _mysql_session_member->members(chat_session_id);
+    auto members = _odb_session_member->members(chat_session_id);
 
     // 将封装好的消息信息发布到消息队列，等待消息服务进行消息持久化
     bool ret =
@@ -89,7 +89,7 @@ class ForwardServiceImpl : public ForwardService {
   }
 
  private:
-  SessionMemberTable::Ptr _mysql_session_member;
+  SessionMemberTable::Ptr _odb_session_member;
 
   std::string _exchange_name;
   MQClient::Ptr _mq_client;
@@ -145,11 +145,11 @@ class ForwardServerBuilder {
     _mq_client->declare(exchange, queue, routing_key);
   }
 
-  void init_mysql_client(const std::string& user, const std::string& passwd,
+  void init_odb_client(const std::string& user, const std::string& passwd,
                          const std::string& db, const std::string& host,
                          size_t port, const std::string& charset,
                          size_t max_connections) {
-    _mysql_client = MysqlClientFactory::create(user, passwd, db, host, port,
+    _odb_client = ODBClientFactory::create(user, passwd, db, host, port,
                                                charset, max_connections);
   }
 
@@ -159,14 +159,14 @@ class ForwardServerBuilder {
       abort();
     }
 
-    if (!_mysql_client) {
-      LOG_ERROR("未初始化mysql数据库模块");
+    if (!_odb_client) {
+      LOG_ERROR("未初始化odb数据库模块");
       abort();
     }
 
     _server = std::make_shared<brpc::Server>();
     auto forward_service =
-        new ForwardServiceImpl(_mysql_client, _exchange_name, _mq_client,
+        new ForwardServiceImpl(_odb_client, _exchange_name, _mq_client,
                                _user_service_name, _channels);
     int ret = _server->AddService(forward_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
@@ -214,7 +214,7 @@ class ForwardServerBuilder {
   ServiceDiscovery::Ptr _discovery_client;
   std::string _exchange_name;
   MQClient::Ptr _mq_client;
-  std::shared_ptr<odb::core::database> _mysql_client;
+  std::shared_ptr<odb::core::database> _odb_client;
   std::shared_ptr<brpc::Server> _server;
 
   std::string _user_service_name;

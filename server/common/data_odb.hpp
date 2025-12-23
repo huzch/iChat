@@ -4,7 +4,7 @@
 
 namespace huzch {
 
-class MysqlClientFactory {
+class ODBClientFactory {
  public:
   static std::shared_ptr<odb::core::database> create(
       const std::string& user, const std::string& passwd, const std::string& db,

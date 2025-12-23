@@ -14,13 +14,13 @@ DEFINE_string(friend_service_name, "/friend_service", "好友服务名");
 DEFINE_string(instance_name, "/instance", "实例名");
 DEFINE_string(friend_service_host, "127.0.0.1:10006", "好友服务实例访问地址");
 
-DEFINE_string(mysql_host, "127.0.0.1", "mysql服务器地址");
-DEFINE_string(mysql_user, "root", "mysql服务器用户名");
-DEFINE_string(mysql_passwd, "123456", "mysql服务器密码");
-DEFINE_string(mysql_db, "huzch", "mysql默认库名");
-DEFINE_string(mysql_charset, "utf8", "mysql客户端字符集");
-DEFINE_int32(mysql_port, 0, "mysql服务器端口");
-DEFINE_int32(mysql_max_connections, 4, "mysql连接池最大连接数量");
+DEFINE_string(odb_host, "127.0.0.1", "odb服务器地址");
+DEFINE_string(odb_user, "root", "odb服务器用户名");
+DEFINE_string(odb_passwd, "123456", "odb服务器密码");
+DEFINE_string(odb_db, "huzch", "odb默认库名");
+DEFINE_string(odb_charset, "utf8", "odb客户端字符集");
+DEFINE_int32(odb_port, 0, "odb服务器端口");
+DEFINE_int32(odb_max_connections, 4, "odb连接池最大连接数量");
 
 DEFINE_int32(rpc_port, 10006, "rpc服务器监听端口");
 DEFINE_int32(rpc_timeout, -1, "rpc调用超时时间");
@@ -43,10 +43,10 @@ int main(int argc, char* argv[]) {
                             FLAGS_user_service_name,
                             FLAGS_message_service_name);
 
-  // 初始化mysql数据库
-  fsb.init_mysql_client(FLAGS_mysql_user, FLAGS_mysql_passwd, FLAGS_mysql_db,
-                        FLAGS_mysql_host, FLAGS_mysql_port, FLAGS_mysql_charset,
-                        FLAGS_mysql_max_connections);
+  // 初始化odb数据库
+  fsb.init_odb_client(FLAGS_odb_user, FLAGS_odb_passwd, FLAGS_odb_db,
+                        FLAGS_odb_host, FLAGS_odb_port, FLAGS_odb_charset,
+                        FLAGS_odb_max_connections);
 
   // 初始化rpc服务器
   fsb.init_rpc_server(FLAGS_rpc_port, FLAGS_rpc_timeout, FLAGS_rpc_threads);

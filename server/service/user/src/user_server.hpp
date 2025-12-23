@@ -3,7 +3,7 @@
 
 #include "base.pb.h"
 #include "channel.hpp"
-#include "data_mysql_user.hpp"
+#include "data_odb_user.hpp"
 #include "data_redis.hpp"
 #include "data_search.hpp"
 #include "registry.hpp"
@@ -17,13 +17,13 @@ namespace huzch {
 class UserServiceImpl : public UserService {
  public:
   UserServiceImpl(const std::shared_ptr<elasticlient::Client>& es_client,
-                  const std::shared_ptr<odb::core::database>& mysql_client,
+                  const std::shared_ptr<odb::core::database>& odb_client,
                   const std::shared_ptr<sw::redis::Redis>& redis_client,
                   const SMSClient::Ptr& sms_client,
                   const std::string& file_service_name,
                   const ChannelManager::Ptr& channels)
       : _es_user(std::make_shared<ESUser>(es_client)),
-        _mysql_user(std::make_shared<UserTable>(mysql_client)),
+        _odb_user(std::make_shared<UserTable>(odb_client)),
         _redis_session(std::make_shared<Session>(redis_client)),
         _redis_status(std::make_shared<Status>(redis_client)),
         _redis_code(std::make_shared<Code>(redis_client)),
@@ -59,7 +59,7 @@ class UserServiceImpl : public UserService {
       return;
     }
 
-    auto user = _mysql_user->select_by_name(name);
+    auto user = _odb_user->select_by_name(name);
     if (user) {
       LOG_ERROR("{} 用户名已存在: {}", request_id, name);
       err_rsp("用户名已存在");
@@ -68,10 +68,10 @@ class UserServiceImpl : public UserService {
 
     std::string user_id = uuid();
     user = std::make_shared<User>(user_id, name, password);
-    bool ret = _mysql_user->insert(user);
+    bool ret = _odb_user->insert(user);
     if (!ret) {
-      LOG_ERROR("{} mysql新增用户失败", request_id);
-      err_rsp("mysql新增用户失败");
+      LOG_ERROR("{} odb新增用户失败", request_id);
+      err_rsp("odb新增用户失败");
       return;
     }
 
@@ -99,7 +99,7 @@ class UserServiceImpl : public UserService {
     std::string name = request->user_name();
     std::string password = request->password();
 
-    auto user = _mysql_user->select_by_name(name);
+    auto user = _odb_user->select_by_name(name);
     if (!user || password != user->password()) {
       LOG_ERROR("{} 用户名或密码错误: {} {} {}", request_id, name, password);
       err_rsp("用户名或密码错误");
@@ -202,7 +202,7 @@ class UserServiceImpl : public UserService {
     }
     _redis_code->remove(code_id);
 
-    auto user = _mysql_user->select_by_phone(phone);
+    auto user = _odb_user->select_by_phone(phone);
     if (user) {
       LOG_ERROR("{} 手机号已存在: {}", request_id, phone);
       err_rsp("手机号已存在");
@@ -211,10 +211,10 @@ class UserServiceImpl : public UserService {
 
     std::string user_id = uuid();
     user = std::make_shared<User>(user_id, phone);
-    bool ret = _mysql_user->insert(user);
+    bool ret = _odb_user->insert(user);
     if (!ret) {
-      LOG_ERROR("{} mysql新增用户失败", request_id);
-      err_rsp("mysql新增用户失败");
+      LOG_ERROR("{} odb新增用户失败", request_id);
+      err_rsp("odb新增用户失败");
       return;
     }
 
@@ -249,7 +249,7 @@ class UserServiceImpl : public UserService {
       return;
     }
 
-    auto user = _mysql_user->select_by_phone(phone);
+    auto user = _odb_user->select_by_phone(phone);
     if (!user) {
       LOG_ERROR("{} 手机号不存在: {}", request_id, phone);
       err_rsp("手机号不存在");
@@ -303,7 +303,7 @@ class UserServiceImpl : public UserService {
     };
     std::string user_id = request->user_id();
 
-    auto user = _mysql_user->select_by_id(user_id);
+    auto user = _odb_user->select_by_id(user_id);
     if (!user) {
       LOG_ERROR("{} 用户不存在: {}", request_id, user_id);
       err_rsp("用户不存在");
@@ -362,7 +362,7 @@ class UserServiceImpl : public UserService {
       users_id.push_back(request->users_id(i));
     }
 
-    auto users = _mysql_user->select_by_multi_id(users_id);
+    auto users = _odb_user->select_by_multi_id(users_id);
     if (users.size() != users_id.size()) {
       LOG_ERROR("{} 用户查询结果与查找条件不一致 {} {}", request_id,
                 users.size(), users_id.size());
@@ -377,11 +377,13 @@ class UserServiceImpl : public UserService {
       }
     }
     std::unordered_map<std::string, std::string> files_data;
-    bool ret = get_file(request_id, files_id, files_data);
-    if (!ret) {
-      LOG_ERROR("{} 批量下载文件失败", request_id);
-      err_rsp("批量下载文件失败");
-      return;
+    if (!files_id.empty()) {
+      bool ret = get_file(request_id, files_id, files_data);
+      if (!ret) {
+        LOG_ERROR("{} 批量下载文件失败", request_id);
+        err_rsp("批量下载文件失败");
+        return;
+      }
     }
 
     for (auto& user : users) {
@@ -423,11 +425,13 @@ class UserServiceImpl : public UserService {
       }
     }
     std::unordered_map<std::string, std::string> files_data;
-    bool ret = get_file(request_id, files_id, files_data);
-    if (!ret) {
-      LOG_ERROR("{} 批量下载文件失败", request_id);
-      err_rsp("批量下载文件失败");
-      return;
+    if (!files_id.empty()) {
+      bool ret = get_file(request_id, files_id, files_data);
+      if (!ret) {
+        LOG_ERROR("{} 批量下载文件失败", request_id);
+        err_rsp("批量下载文件失败");
+        return;
+      }
     }
 
     for (auto& user : users) {
@@ -458,7 +462,7 @@ class UserServiceImpl : public UserService {
     std::string user_id = request->user_id();
     std::string avatar = request->avatar();
 
-    auto user = _mysql_user->select_by_id(user_id);
+    auto user = _odb_user->select_by_id(user_id);
     if (!user) {
       LOG_ERROR("{} 用户不存在: {}", request_id, user_id);
       err_rsp("用户不存在");
@@ -489,11 +493,11 @@ class UserServiceImpl : public UserService {
     }
 
     user->avatar_id(rsp.file_info().file_id());
-    bool ret = _mysql_user->update(user);
+    bool ret = _odb_user->update(user);
     if (!ret) {
-      LOG_ERROR("{} mysql更新用户头像id失败: {}", request_id,
+      LOG_ERROR("{} odb更新用户头像id失败: {}", request_id,
                 user->avatar_id());
-      err_rsp("mysql更新用户头像id失败");
+      err_rsp("odb更新用户头像id失败");
       return;
     }
 
@@ -528,7 +532,7 @@ class UserServiceImpl : public UserService {
       return;
     }
 
-    auto user = _mysql_user->select_by_id(user_id);
+    auto user = _odb_user->select_by_id(user_id);
     if (!user) {
       LOG_ERROR("{} 用户不存在: {}", request_id, user_id);
       err_rsp("用户不存在");
@@ -536,10 +540,10 @@ class UserServiceImpl : public UserService {
     }
 
     user->name(name);
-    bool ret = _mysql_user->update(user);
+    bool ret = _odb_user->update(user);
     if (!ret) {
-      LOG_ERROR("{} mysql更新用户名失败: {}", request_id, user->name());
-      err_rsp("mysql更新用户名失败");
+      LOG_ERROR("{} odb更新用户名失败: {}", request_id, user->name());
+      err_rsp("odb更新用户名失败");
       return;
     }
 
@@ -569,7 +573,7 @@ class UserServiceImpl : public UserService {
     std::string user_id = request->user_id();
     std::string description = request->description();
 
-    auto user = _mysql_user->select_by_id(user_id);
+    auto user = _odb_user->select_by_id(user_id);
     if (!user) {
       LOG_ERROR("{} 用户不存在: {}", request_id, user_id);
       err_rsp("用户不存在");
@@ -577,11 +581,11 @@ class UserServiceImpl : public UserService {
     }
 
     user->description(description);
-    bool ret = _mysql_user->update(user);
+    bool ret = _odb_user->update(user);
     if (!ret) {
-      LOG_ERROR("{} mysql更新用户签名失败: {}", request_id,
+      LOG_ERROR("{} odb更新用户签名失败: {}", request_id,
                 user->description());
-      err_rsp("mysql更新用户签名失败");
+      err_rsp("odb更新用户签名失败");
       return;
     }
 
@@ -627,7 +631,7 @@ class UserServiceImpl : public UserService {
     }
     _redis_code->remove(code_id);
 
-    auto user = _mysql_user->select_by_id(user_id);
+    auto user = _odb_user->select_by_id(user_id);
     if (!user) {
       LOG_ERROR("{} 用户不存在: {}", request_id, user_id);
       err_rsp("用户不存在");
@@ -635,10 +639,10 @@ class UserServiceImpl : public UserService {
     }
 
     user->phone(phone);
-    bool ret = _mysql_user->update(user);
+    bool ret = _odb_user->update(user);
     if (!ret) {
-      LOG_ERROR("{} mysql更新用户手机号失败: {}", request_id, user->phone());
-      err_rsp("mysql更新用户手机号失败");
+      LOG_ERROR("{} odb更新用户手机号失败: {}", request_id, user->phone());
+      err_rsp("odb更新用户手机号失败");
       return;
     }
 
@@ -746,7 +750,7 @@ class UserServiceImpl : public UserService {
 
  private:
   ESUser::Ptr _es_user;
-  UserTable::Ptr _mysql_user;
+  UserTable::Ptr _odb_user;
   Session::Ptr _redis_session;
   Status::Ptr _redis_status;
   Code::Ptr _redis_code;
@@ -803,11 +807,11 @@ class UserServerBuilder {
     _es_client = ESClientFactory::create(hosts);
   }
 
-  void init_mysql_client(const std::string& user, const std::string& passwd,
+  void init_odb_client(const std::string& user, const std::string& passwd,
                          const std::string& db, const std::string& host,
                          size_t port, const std::string& charset,
                          size_t max_connections) {
-    _mysql_client = MysqlClientFactory::create(user, passwd, db, host, port,
+    _odb_client = ODBClientFactory::create(user, passwd, db, host, port,
                                                charset, max_connections);
   }
 
@@ -827,8 +831,8 @@ class UserServerBuilder {
       abort();
     }
 
-    if (!_mysql_client) {
-      LOG_ERROR("未初始化mysql数据库模块");
+    if (!_odb_client) {
+      LOG_ERROR("未初始化odb数据库模块");
       abort();
     }
 
@@ -839,7 +843,7 @@ class UserServerBuilder {
 
     _server = std::make_shared<brpc::Server>();
     auto user_service =
-        new UserServiceImpl(_es_client, _mysql_client, _redis_client,
+        new UserServiceImpl(_es_client, _odb_client, _redis_client,
                             _sms_client, _file_service_name, _channels);
     int ret = _server->AddService(user_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
@@ -887,7 +891,7 @@ class UserServerBuilder {
   ServiceDiscovery::Ptr _discovery_client;
   SMSClient::Ptr _sms_client;
   std::shared_ptr<elasticlient::Client> _es_client;
-  std::shared_ptr<odb::core::database> _mysql_client;
+  std::shared_ptr<odb::core::database> _odb_client;
   std::shared_ptr<sw::redis::Redis> _redis_client;
   std::shared_ptr<brpc::Server> _server;
 

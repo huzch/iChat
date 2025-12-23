@@ -3,7 +3,7 @@
 
 #include "base.pb.h"
 #include "channel.hpp"
-#include "data_mysql_message.hpp"
+#include "data_odb_message.hpp"
 #include "data_search.hpp"
 #include "registry.hpp"
 #include "file.pb.h"
@@ -17,12 +17,12 @@ namespace huzch {
 class MessageServiceImpl : public MessageService {
  public:
   MessageServiceImpl(const std::shared_ptr<elasticlient::Client>& es_client,
-                     const std::shared_ptr<odb::core::database>& mysql_client,
+                     const std::shared_ptr<odb::core::database>& odb_client,
                      const std::string& file_service_name,
                      const std::string& user_service_name,
                      const ChannelManager::Ptr& channels)
       : _es_message(std::make_shared<ESMessage>(es_client)),
-        _mysql_message(std::make_shared<MessageTable>(mysql_client)),
+        _odb_message(std::make_shared<MessageTable>(odb_client)),
         _file_service_name(file_service_name),
         _user_service_name(user_service_name),
         _channels(channels) {
@@ -48,7 +48,7 @@ class MessageServiceImpl : public MessageService {
         boost::posix_time::from_time_t(request->end_time());
 
     auto messages =
-        _mysql_message->range(chat_session_id, start_time, end_time);
+        _odb_message->range(chat_session_id, start_time, end_time);
 
     std::unordered_set<std::string> users_id;
     for (auto& message : messages) {
@@ -146,7 +146,7 @@ class MessageServiceImpl : public MessageService {
     std::string chat_session_id = request->chat_session_id();
     int msg_count = request->msg_count();
 
-    auto messages = _mysql_message->recent(chat_session_id, msg_count);
+    auto messages = _odb_message->recent(chat_session_id, msg_count);
 
     std::unordered_set<std::string> users_id;
     for (auto& message : messages) {
@@ -338,9 +338,9 @@ class MessageServiceImpl : public MessageService {
     message.file_id(file_id);
     message.file_name(file_name);
     message.file_size(file_size);
-    ret = _mysql_message->insert(message);
+    ret = _odb_message->insert(message);
     if (!ret) {
-      LOG_ERROR("mysql新增消息失败");
+      LOG_ERROR("odb新增消息失败");
       return;
     }
 
@@ -440,7 +440,7 @@ class MessageServiceImpl : public MessageService {
   }
 
  private:
-  MessageTable::Ptr _mysql_message;
+  MessageTable::Ptr _odb_message;
   ESMessage::Ptr _es_message;
 
   std::string _file_service_name;
@@ -503,11 +503,11 @@ class MessageServerBuilder {
     _es_client = ESClientFactory::create(hosts);
   }
 
-  void init_mysql_client(const std::string& user, const std::string& passwd,
+  void init_odb_client(const std::string& user, const std::string& passwd,
                          const std::string& db, const std::string& host,
                          size_t port, const std::string& charset,
                          size_t max_connections) {
-    _mysql_client = MysqlClientFactory::create(user, passwd, db, host, port,
+    _odb_client = ODBClientFactory::create(user, passwd, db, host, port,
                                                charset, max_connections);
   }
 
@@ -522,14 +522,14 @@ class MessageServerBuilder {
       abort();
     }
 
-    if (!_mysql_client) {
-      LOG_ERROR("未初始化mysql数据库模块");
+    if (!_odb_client) {
+      LOG_ERROR("未初始化odb数据库模块");
       abort();
     }
 
     _server = std::make_shared<brpc::Server>();
     auto message_service =
-        new MessageServiceImpl(_es_client, _mysql_client, _file_service_name,
+        new MessageServiceImpl(_es_client, _odb_client, _file_service_name,
                                _user_service_name, _channels);
     int ret = _server->AddService(message_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
@@ -582,7 +582,7 @@ class MessageServerBuilder {
   std::string _queue_name;
   MQClient::Ptr _mq_client;
   std::shared_ptr<elasticlient::Client> _es_client;
-  std::shared_ptr<odb::core::database> _mysql_client;
+  std::shared_ptr<odb::core::database> _odb_client;
   std::shared_ptr<brpc::Server> _server;
 
   std::string _file_service_name;

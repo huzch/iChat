@@ -1,5 +1,5 @@
 #pragma once
-#include "data_mysql.hpp"
+#include "data_odb.hpp"
 #include "logger.hpp"
 #include "session-odb.hxx"
 #include "session.hxx"
@@ -12,12 +12,12 @@ class SessionTable {
 
  public:
   SessionTable(const std::shared_ptr<odb::core::database>& db)
-      : _mysql_client(db) {}
+      : _odb_client(db) {}
 
   bool insert(Session& session) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      _mysql_client->persist(session);
+      odb::transaction t(_odb_client->begin());
+      _odb_client->persist(session);
       t.commit();
     } catch (const std::exception& e) {
       LOG_ERROR("会话 {} 新增失败: {}", session.session_name(), e.what());
@@ -28,10 +28,10 @@ class SessionTable {
 
   bool remove(const std::string& session_id) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      _mysql_client->erase_query<Session>(odb::query<Session>::session_id ==
+      odb::transaction t(_odb_client->begin());
+      _odb_client->erase_query<Session>(odb::query<Session>::session_id ==
                                           session_id);
-      _mysql_client->erase_query<SessionMember>(
+      _odb_client->erase_query<SessionMember>(
           odb::query<SessionMember>::session_id == session_id);
       t.commit();
     } catch (const std::exception& e) {
@@ -43,8 +43,8 @@ class SessionTable {
 
   std::shared_ptr<Session> select(const std::string& session_id) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      auto session = _mysql_client->query_one<Session>(
+      odb::transaction t(_odb_client->begin());
+      auto session = _odb_client->query_one<Session>(
           odb::query<Session>::session_id == session_id);
       t.commit();
       return std::shared_ptr<Session>(session);
@@ -57,8 +57,8 @@ class SessionTable {
   std::vector<SingleSession> single_sessions(const std::string& user_id) {
     std::vector<SingleSession> sessions;
     try {
-      odb::transaction t(_mysql_client->begin());
-      auto result = _mysql_client->query<SingleSession>(
+      odb::transaction t(_odb_client->begin());
+      auto result = _odb_client->query<SingleSession>(
           odb::query<SingleSession>::Session::session_type ==
               SessionType::SINGLE &&
           odb::query<SingleSession>::m1::user_id == user_id &&
@@ -77,8 +77,8 @@ class SessionTable {
   std::vector<GroupSession> group_sessions(const std::string& user_id) {
     std::vector<GroupSession> sessions;
     try {
-      odb::transaction t(_mysql_client->begin());
-      auto result = _mysql_client->query<GroupSession>(
+      odb::transaction t(_odb_client->begin());
+      auto result = _odb_client->query<GroupSession>(
           odb::query<GroupSession>::Session::session_type ==
               SessionType::GROUP &&
           odb::query<GroupSession>::m::user_id == user_id);
@@ -94,7 +94,7 @@ class SessionTable {
   }
 
  private:
-  std::shared_ptr<odb::core::database> _mysql_client;
+  std::shared_ptr<odb::core::database> _odb_client;
 };
 
 }  // namespace huzch

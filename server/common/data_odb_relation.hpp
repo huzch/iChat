@@ -1,5 +1,5 @@
 #pragma once
-#include "data_mysql.hpp"
+#include "data_odb.hpp"
 #include "logger.hpp"
 #include "relation-odb.hxx"
 #include "relation.hxx"
@@ -12,15 +12,15 @@ class RelationTable {
 
  public:
   RelationTable(const std::shared_ptr<odb::core::database>& db)
-      : _mysql_client(db) {}
+      : _odb_client(db) {}
 
   bool insert(const std::string& user_id, const std::string& peer_id) {
     try {
-      odb::transaction t(_mysql_client->begin());
+      odb::transaction t(_odb_client->begin());
       Relation r1(user_id, peer_id);
       Relation r2(peer_id, user_id);
-      _mysql_client->persist(r1);
-      _mysql_client->persist(r2);
+      _odb_client->persist(r1);
+      _odb_client->persist(r2);
       t.commit();
     } catch (const std::exception& e) {
       LOG_ERROR("好友关系 {}-{} 新增失败: {}", user_id, peer_id, e.what());
@@ -31,11 +31,11 @@ class RelationTable {
 
   bool remove(const std::string& user_id, const std::string& peer_id) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      _mysql_client->erase_query<Relation>(
+      odb::transaction t(_odb_client->begin());
+      _odb_client->erase_query<Relation>(
           odb::query<Relation>::user_id == user_id &&
           odb::query<Relation>::peer_id == peer_id);
-      _mysql_client->erase_query<Relation>(
+      _odb_client->erase_query<Relation>(
           odb::query<Relation>::user_id == peer_id &&
           odb::query<Relation>::peer_id == user_id);
       t.commit();
@@ -48,8 +48,8 @@ class RelationTable {
 
   bool exists(const std::string& user_id, const std::string& peer_id) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      auto result = _mysql_client->query<Relation>(
+      odb::transaction t(_odb_client->begin());
+      auto result = _odb_client->query<Relation>(
           odb::query<Relation>::user_id == user_id &&
           odb::query<Relation>::peer_id == peer_id);
       t.commit();
@@ -63,8 +63,8 @@ class RelationTable {
   std::vector<std::string> friends_id(const std::string& user_id) {
     std::vector<std::string> friends_id;
     try {
-      odb::transaction t(_mysql_client->begin());
-      auto result = _mysql_client->query<Relation>(
+      odb::transaction t(_odb_client->begin());
+      auto result = _odb_client->query<Relation>(
           odb::query<Relation>::user_id == user_id);
       friends_id.reserve(result.size());
       for (const auto& relation : result) {
@@ -79,7 +79,7 @@ class RelationTable {
   }
 
  private:
-  std::shared_ptr<odb::core::database> _mysql_client;
+  std::shared_ptr<odb::core::database> _odb_client;
 };
 
 }  // namespace huzch

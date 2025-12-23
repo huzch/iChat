@@ -3,10 +3,10 @@
 
 #include "base.pb.h"
 #include "channel.hpp"
-#include "data_mysql_friend_request.hpp"
-#include "data_mysql_relation.hpp"
-#include "data_mysql_session.hpp"
-#include "data_mysql_session_member.hpp"
+#include "data_odb_friend_request.hpp"
+#include "data_odb_relation.hpp"
+#include "data_odb_session.hpp"
+#include "data_odb_session_member.hpp"
 #include "data_search.hpp"
 #include "registry.hpp"
 #include "friend.pb.h"
@@ -18,16 +18,16 @@ namespace huzch {
 
 class FriendServiceImpl : public FriendService {
  public:
-  FriendServiceImpl(const std::shared_ptr<odb::core::database>& mysql_client,
+  FriendServiceImpl(const std::shared_ptr<odb::core::database>& odb_client,
                     const std::string& user_service_name,
                     const std::string& message_service_name,
                     const ChannelManager::Ptr& channels)
-      : _mysql_session(std::make_shared<SessionTable>(mysql_client)),
-        _mysql_session_member(
-            std::make_shared<SessionMemberTable>(mysql_client)),
-        _mysql_relation(std::make_shared<RelationTable>(mysql_client)),
-        _mysql_friend_request(
-            std::make_shared<FriendRequestTable>(mysql_client)),
+      : _odb_session(std::make_shared<SessionTable>(odb_client)),
+        _odb_session_member(
+            std::make_shared<SessionMemberTable>(odb_client)),
+        _odb_relation(std::make_shared<RelationTable>(odb_client)),
+        _odb_friend_request(
+            std::make_shared<FriendRequestTable>(odb_client)),
         _user_service_name(user_service_name),
         _message_service_name(message_service_name),
         _channels(channels) {}
@@ -45,7 +45,7 @@ class FriendServiceImpl : public FriendService {
     };
     std::string user_id = request->user_id();
 
-    auto friends_id = _mysql_relation->friends_id(user_id);
+    auto friends_id = _odb_relation->friends_id(user_id);
 
     std::unordered_set<std::string> users_id;
     for (auto& friend_id : friends_id) {
@@ -81,17 +81,17 @@ class FriendServiceImpl : public FriendService {
     std::string peer_id = request->peer_id();
     std::string chat_session_id = request->chat_session_id();
 
-    bool ret = _mysql_relation->remove(user_id, peer_id);
+    bool ret = _odb_relation->remove(user_id, peer_id);
     if (!ret) {
-      LOG_ERROR("{} mysql移除好友失败", request_id);
-      err_rsp("mysql移除好友失败");
+      LOG_ERROR("{} odb移除好友失败", request_id);
+      err_rsp("odb移除好友失败");
       return;
     }
 
-    ret = _mysql_session->remove(chat_session_id);
+    ret = _odb_session->remove(chat_session_id);
     if (!ret) {
-      LOG_ERROR("{} mysql移除好友会话失败", request_id);
-      err_rsp("mysql移除好友会话失败");
+      LOG_ERROR("{} odb移除好友会话失败", request_id);
+      err_rsp("odb移除好友会话失败");
       return;
     }
 
@@ -113,14 +113,14 @@ class FriendServiceImpl : public FriendService {
     std::string user_id = request->user_id();
     std::string respondent_id = request->respondent_id();
 
-    bool ret = _mysql_relation->exists(user_id, respondent_id);
+    bool ret = _odb_relation->exists(user_id, respondent_id);
     if (ret) {
       LOG_ERROR("{} 用户 {} 已存在好友 {}", request_id, user_id, respondent_id);
       err_rsp("用户已存在好友");
       return;
     }
 
-    ret = _mysql_friend_request->exists(user_id, respondent_id);
+    ret = _odb_friend_request->exists(user_id, respondent_id);
     if (ret) {
       LOG_ERROR("{} 用户 {} 已申请添加好友 {}", request_id, user_id,
                 respondent_id);
@@ -129,10 +129,10 @@ class FriendServiceImpl : public FriendService {
     }
 
     FriendRequest friend_request(user_id, respondent_id);
-    ret = _mysql_friend_request->insert(friend_request);
+    ret = _odb_friend_request->insert(friend_request);
     if (!ret) {
-      LOG_ERROR("{} mysql新增好友申请失败", request_id);
-      err_rsp("mysql新增好友申请失败");
+      LOG_ERROR("{} odb新增好友申请失败", request_id);
+      err_rsp("odb新增好友申请失败");
       return;
     }
     response->set_success(true);
@@ -154,10 +154,10 @@ class FriendServiceImpl : public FriendService {
     std::string requester_id = request->requester_id();
     std::string user_id = request->user_id();
 
-    bool ret = _mysql_friend_request->remove(requester_id, user_id);
+    bool ret = _odb_friend_request->remove(requester_id, user_id);
     if (!ret) {
-      LOG_ERROR("{} mysql移除好友申请失败", request_id);
-      err_rsp("mysql移除好友申请失败");
+      LOG_ERROR("{} odb移除好友申请失败", request_id);
+      err_rsp("odb移除好友申请失败");
       return;
     }
 
@@ -167,29 +167,29 @@ class FriendServiceImpl : public FriendService {
       return;
     }
 
-    ret = _mysql_relation->insert(requester_id, user_id);
+    ret = _odb_relation->insert(requester_id, user_id);
     if (!ret) {
-      LOG_ERROR("{} mysql新增好友失败", request_id);
-      err_rsp("mysql新增好友失败");
+      LOG_ERROR("{} odb新增好友失败", request_id);
+      err_rsp("odb新增好友失败");
       return;
     }
 
     std::string chat_session_id = uuid();
     Session session(chat_session_id, "", SessionType::SINGLE);
-    ret = _mysql_session->insert(session);
+    ret = _odb_session->insert(session);
     if (!ret) {
-      LOG_ERROR("{} mysql新增会话失败", request_id);
-      err_rsp("mysql新增会话失败");
+      LOG_ERROR("{} odb新增会话失败", request_id);
+      err_rsp("odb新增会话失败");
       return;
     }
 
     std::vector<SessionMember> members;
     members.emplace_back(chat_session_id, requester_id);
     members.emplace_back(chat_session_id, user_id);
-    ret = _mysql_session_member->insert(members);
+    ret = _odb_session_member->insert(members);
     if (!ret) {
-      LOG_ERROR("{} mysql新增会话成员失败", request_id);
-      err_rsp("mysql新增会话成员失败");
+      LOG_ERROR("{} odb新增会话成员失败", request_id);
+      err_rsp("odb新增会话成员失败");
       return;
     }
 
@@ -210,7 +210,7 @@ class FriendServiceImpl : public FriendService {
     };
     std::string user_id = request->user_id();
 
-    auto requesters_id = _mysql_friend_request->requesters_id(user_id);
+    auto requesters_id = _odb_friend_request->requesters_id(user_id);
 
     std::unordered_set<std::string> users_id;
     for (auto& requester_id : requesters_id) {
@@ -245,7 +245,7 @@ class FriendServiceImpl : public FriendService {
     };
     std::string user_id = request->user_id();
 
-    auto single_sessions = _mysql_session->single_sessions(user_id);
+    auto single_sessions = _odb_session->single_sessions(user_id);
 
     std::unordered_set<std::string> users_id;
     for (auto& single_session : single_sessions) {
@@ -277,7 +277,7 @@ class FriendServiceImpl : public FriendService {
       chat_session_info->mutable_prev_message()->CopyFrom(message_info);
     }
 
-    auto group_sessions = _mysql_session->group_sessions(user_id);
+    auto group_sessions = _odb_session->group_sessions(user_id);
 
     for (auto& group_session : group_sessions) {
       auto chat_session_info = response->add_chat_sessions_info();
@@ -312,10 +312,10 @@ class FriendServiceImpl : public FriendService {
 
     std::string chat_session_id = uuid();
     Session session(chat_session_id, chat_session_name, SessionType::GROUP);
-    bool ret = _mysql_session->insert(session);
+    bool ret = _odb_session->insert(session);
     if (!ret) {
-      LOG_ERROR("{} mysql新增会话失败", request_id);
-      err_rsp("mysql新增会话失败");
+      LOG_ERROR("{} odb新增会话失败", request_id);
+      err_rsp("odb新增会话失败");
       return;
     }
 
@@ -324,10 +324,10 @@ class FriendServiceImpl : public FriendService {
     for (auto& member_id : request->members_id()) {
       members.emplace_back(chat_session_id, member_id);
     }
-    ret = _mysql_session_member->insert(members);
+    ret = _odb_session_member->insert(members);
     if (!ret) {
-      LOG_ERROR("{} mysql新增会话成员失败", request_id);
-      err_rsp("mysql新增会话成员失败");
+      LOG_ERROR("{} odb新增会话成员失败", request_id);
+      err_rsp("odb新增会话成员失败");
       return;
     }
 
@@ -351,7 +351,7 @@ class FriendServiceImpl : public FriendService {
     };
     std::string chat_session_id = request->chat_session_id();
 
-    auto members = _mysql_session_member->members(chat_session_id);
+    auto members = _odb_session_member->members(chat_session_id);
 
     std::unordered_set<std::string> users_id;
     for (auto& member : members) {
@@ -376,6 +376,9 @@ class FriendServiceImpl : public FriendService {
   bool get_user(const std::string& request_id,
                 const std::unordered_set<std::string> users_id,
                 std::unordered_map<std::string, UserInfo>& users_info) {
+    if (users_id.empty()) {
+      return true;
+    }
     auto channel = _channels->get(_user_service_name);
     if (!channel) {
       LOG_ERROR("{} 未找到 {} 服务节点", request_id, _user_service_name);
@@ -437,10 +440,10 @@ class FriendServiceImpl : public FriendService {
   }
 
  private:
-  SessionTable::Ptr _mysql_session;
-  SessionMemberTable::Ptr _mysql_session_member;
-  RelationTable::Ptr _mysql_relation;
-  FriendRequestTable::Ptr _mysql_friend_request;
+  SessionTable::Ptr _odb_session;
+  SessionMemberTable::Ptr _odb_session_member;
+  RelationTable::Ptr _odb_relation;
+  FriendRequestTable::Ptr _odb_friend_request;
 
   std::string _user_service_name;
   std::string _message_service_name;
@@ -489,23 +492,23 @@ class FriendServerBuilder {
         registry_host, base_dir, put_cb, del_cb);
   }
 
-  void init_mysql_client(const std::string& user, const std::string& passwd,
+  void init_odb_client(const std::string& user, const std::string& passwd,
                          const std::string& db, const std::string& host,
                          size_t port, const std::string& charset,
                          size_t max_connections) {
-    _mysql_client = MysqlClientFactory::create(user, passwd, db, host, port,
+    _odb_client = ODBClientFactory::create(user, passwd, db, host, port,
                                                charset, max_connections);
   }
 
   void init_rpc_server(int port, int timeout, int num_threads) {
-    if (!_mysql_client) {
-      LOG_ERROR("未初始化mysql数据库模块");
+    if (!_odb_client) {
+      LOG_ERROR("未初始化odb数据库模块");
       abort();
     }
 
     _server = std::make_shared<brpc::Server>();
     auto friend_service = new FriendServiceImpl(
-        _mysql_client, _user_service_name, _message_service_name, _channels);
+        _odb_client, _user_service_name, _message_service_name, _channels);
     int ret = _server->AddService(friend_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
     if (ret == -1) {
@@ -550,7 +553,7 @@ class FriendServerBuilder {
  private:
   ServiceRegistry::Ptr _registry_client;
   ServiceDiscovery::Ptr _discovery_client;
-  std::shared_ptr<odb::core::database> _mysql_client;
+  std::shared_ptr<odb::core::database> _odb_client;
   std::shared_ptr<brpc::Server> _server;
 
   std::string _user_service_name;

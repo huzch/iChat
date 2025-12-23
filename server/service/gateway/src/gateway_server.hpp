@@ -206,6 +206,15 @@ class GatewayServer {
         (CallBack)std::bind(&GatewayServer::GetChatSessionMember, this,
                             std::placeholders::_1, std::placeholders::_2));
 
+	_http_server.set_logger([](const httplib::Request& req, const httplib::Response& res) {
+    // 这里的日志会在请求处理完成后打印
+    LOG_INFO("收到 HTTP 请求: {} {} | 状态码: {} | 客户端 IP: {} | Body 大小: {} bytes", 
+             req.method, 
+             req.path, 
+             res.status, 
+             req.remote_addr,
+             req.body.size());
+	});
     _http_thread = std::thread(
         [this, http_port]() { _http_server.listen("0.0.0.0", http_port); });
     _http_thread.detach();

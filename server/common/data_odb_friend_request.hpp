@@ -1,5 +1,5 @@
 #pragma once
-#include "data_mysql.hpp"
+#include "data_odb.hpp"
 #include "friend_request-odb.hxx"
 #include "friend_request.hxx"
 #include "logger.hpp"
@@ -12,12 +12,12 @@ class FriendRequestTable {
 
  public:
   FriendRequestTable(const std::shared_ptr<odb::core::database>& db)
-      : _mysql_client(db) {}
+      : _odb_client(db) {}
 
   bool insert(FriendRequest& friend_request) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      _mysql_client->persist(friend_request);
+      odb::transaction t(_odb_client->begin());
+      _odb_client->persist(friend_request);
       t.commit();
     } catch (const std::exception& e) {
       LOG_ERROR("好友申请 {}-{} 新增失败: {}", friend_request.user_id(),
@@ -29,8 +29,8 @@ class FriendRequestTable {
 
   bool remove(const std::string& user_id, const std::string& peer_id) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      _mysql_client->erase_query<FriendRequest>(
+      odb::transaction t(_odb_client->begin());
+      _odb_client->erase_query<FriendRequest>(
           odb::query<FriendRequest>::user_id == user_id &&
           odb::query<FriendRequest>::peer_id == peer_id);
       t.commit();
@@ -43,8 +43,8 @@ class FriendRequestTable {
 
   bool exists(const std::string& user_id, const std::string& peer_id) {
     try {
-      odb::transaction t(_mysql_client->begin());
-      auto result = _mysql_client->query<FriendRequest>(
+      odb::transaction t(_odb_client->begin());
+      auto result = _odb_client->query<FriendRequest>(
           odb::query<FriendRequest>::user_id == user_id &&
           odb::query<FriendRequest>::peer_id == peer_id);
       t.commit();
@@ -58,8 +58,8 @@ class FriendRequestTable {
   std::vector<std::string> requesters_id(const std::string& user_id) {
     std::vector<std::string> requesters_id;
     try {
-      odb::transaction t(_mysql_client->begin());
-      auto result = _mysql_client->query<FriendRequest>(
+      odb::transaction t(_odb_client->begin());
+      auto result = _odb_client->query<FriendRequest>(
           odb::query<FriendRequest>::peer_id == user_id);
       requesters_id.reserve(result.size());
       for (auto& requester : result) {
@@ -74,7 +74,7 @@ class FriendRequestTable {
   }
 
  private:
-  std::shared_ptr<odb::core::database> _mysql_client;
+  std::shared_ptr<odb::core::database> _odb_client;
 };
 
 }  // namespace huzch
