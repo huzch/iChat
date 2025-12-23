@@ -1,6 +1,6 @@
 #pragma once
 #include <odb/database.hxx>
-#include <odb/mysql/database.hxx>
+#include <odb/pgsql/database.hxx>
 
 namespace huzch {
 
@@ -11,9 +11,15 @@ class ODBClientFactory {
       const std::string& host, size_t port, const std::string& charset,
       size_t max_connections) {
     auto cpf =
-        std::make_unique<odb::mysql::connection_pool_factory>(max_connections);
-    return std::make_shared<odb::mysql::database>(
-        user, passwd, db, host, port, "", charset, 0, std::move(cpf));
+        std::make_unique<odb::pgsql::connection_pool_factory>(max_connections);
+    
+    std::string extra = "";
+    if (!charset.empty()) {
+      extra = "client_encoding=" + charset;
+    }
+    
+    return std::make_shared<odb::pgsql::database>(
+        user, passwd, db, host, port, extra, std::move(cpf));
   }
 };
 

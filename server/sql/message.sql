@@ -2,26 +2,23 @@
  * compiler for C++.
  */
 
-CREATE DATABASE IF NOT EXISTS `huzch`;
-USE `huzch`;
-DROP TABLE IF EXISTS `message`;
+DROP TABLE IF EXISTS "message" CASCADE;
 
-CREATE TABLE `message` (
-  `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  `message_id` varchar(64) NOT NULL,
-  `session_id` varchar(64) NOT NULL,
-  `user_id` varchar(64) NOT NULL,
-  `message_type` TINYINT UNSIGNED NOT NULL,
-  `create_time` timestamp NULL,
-  `content` TEXT NULL,
-  `file_id` varchar(64) NULL,
-  `file_name` varchar(64) NULL,
-  `file_size` INT UNSIGNED NULL)
- ENGINE=InnoDB;
+CREATE TABLE "message" (
+  "id" BIGSERIAL NOT NULL PRIMARY KEY,
+  "message_id" varchar(64) NOT NULL,
+  "session_id" varchar(64) NOT NULL,
+  "user_id" varchar(64) NOT NULL,
+  "message_type" SMALLINT NOT NULL,
+  "create_time" timestamp NULL,
+  "content" TEXT NULL,
+  "file_id" varchar(64) NULL,
+  "file_name" varchar(64) NULL,
+  "file_size" INTEGER NULL);
 
-CREATE UNIQUE INDEX `message_id_i`
-  ON `message` (`message_id`);
+CREATE UNIQUE INDEX "message_message_id_i"
+  ON "message" ("message_id");
 
-CREATE INDEX `session_id_i`
-  ON `message` (`session_id`);
+CREATE INDEX "message_session_id_i"
+  ON "message" ("session_id");
 

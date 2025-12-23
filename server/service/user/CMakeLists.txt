@@ -49,7 +49,7 @@ foreach(odb_file ${odb_files})
       add_custom_command(
         PRE_BUILD
         COMMAND odb
-        ARGS -d mysql --std c++11 --generate-query --generate-schema ${odb_path}/${odb_file}
+        ARGS -d pgsql --std c++11 --generate-query --generate-schema ${odb_path}/${odb_file}
         DEPENDS ${odb_path}/${odb_file}
         OUTPUT ${odb_hxx_path} ${odb_cxx_path}
         COMMENT "生成odb框架代码:  ${odb_hxx_path} and ${odb_cxx_path}"
@@ -89,7 +89,7 @@ target_link_libraries(${src_target}
   -lcurl
   -ljsoncpp
   -lodb
-  -lodb-mysql
+  -lodb-pgsql
   -lodb-boost
   -lelasticlient
   -lhiredis

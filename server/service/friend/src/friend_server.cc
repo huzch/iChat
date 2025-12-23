@@ -15,8 +15,8 @@ DEFINE_string(instance_name, "/instance", "实例名");
 DEFINE_string(friend_service_host, "127.0.0.1:10006", "好友服务实例访问地址");
 
 DEFINE_string(odb_host, "127.0.0.1", "odb服务器地址");
-DEFINE_string(odb_user, "root", "odb服务器用户名");
-DEFINE_string(odb_passwd, "123456", "odb服务器密码");
+DEFINE_string(odb_user, "gaussdb", "odb服务器用户名");
+DEFINE_string(odb_passwd, "OpenGauss@123", "odb服务器密码");
 DEFINE_string(odb_db, "huzch", "odb默认库名");
 DEFINE_string(odb_charset, "utf8", "odb客户端字符集");
 DEFINE_int32(odb_port, 0, "odb服务器端口");

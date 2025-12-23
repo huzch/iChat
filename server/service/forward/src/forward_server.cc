@@ -21,8 +21,8 @@ DEFINE_string(mq_queue, "msg_queue", "持久化消息发布队列名");
 DEFINE_string(mq_routing_key, "msg_queue", "持久化消息发布路由键");
 
 DEFINE_string(odb_host, "127.0.0.1", "odb服务器地址");
-DEFINE_string(odb_user, "root", "odb服务器用户名");
-DEFINE_string(odb_passwd, "123456", "odb服务器密码");
+DEFINE_string(odb_user, "gaussdb", "odb服务器用户名");
+DEFINE_string(odb_passwd, "OpenGauss@123", "odb服务器密码");
 DEFINE_string(odb_db, "huzch", "odb默认库名");
 DEFINE_string(odb_charset, "utf8", "odb客户端字符集");
 DEFINE_int32(odb_port, 0, "odb服务器端口");

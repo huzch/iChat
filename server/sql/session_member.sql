@@ -2,16 +2,13 @@
  * compiler for C++.
  */
 
-CREATE DATABASE IF NOT EXISTS `huzch`;
-USE `huzch`;
-DROP TABLE IF EXISTS `session_member`;
+DROP TABLE IF EXISTS "session_member" CASCADE;
 
-CREATE TABLE `session_member` (
-  `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  `session_id` varchar(64) NOT NULL,
-  `user_id` varchar(64) NOT NULL)
- ENGINE=InnoDB;
+CREATE TABLE "session_member" (
+  "id" BIGSERIAL NOT NULL PRIMARY KEY,
+  "session_id" varchar(64) NOT NULL,
+  "user_id" varchar(64) NOT NULL);
 
-CREATE INDEX `session_id_i`
-  ON `session_member` (`session_id`);
+CREATE INDEX "session_member_session_id_i"
+  ON "session_member" ("session_id");
 

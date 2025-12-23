@@ -2,26 +2,23 @@
  * compiler for C++.
  */
 
-CREATE DATABASE IF NOT EXISTS `huzch`;
-USE `huzch`;
-DROP TABLE IF EXISTS `user`;
+DROP TABLE IF EXISTS "user" CASCADE;
 
-CREATE TABLE `user` (
-  `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  `user_id` varchar(64) NOT NULL,
-  `avatar_id` varchar(64) NULL,
-  `name` varchar(64) NULL,
-  `phone` varchar(64) NULL,
-  `password` varchar(64) NULL,
-  `description` TEXT NULL)
- ENGINE=InnoDB;
+CREATE TABLE "user" (
+  "id" BIGSERIAL NOT NULL PRIMARY KEY,
+  "user_id" varchar(64) NOT NULL,
+  "avatar_id" varchar(64) NULL,
+  "name" varchar(64) NULL,
+  "phone" varchar(64) NULL,
+  "password" varchar(64) NULL,
+  "description" TEXT NULL);
 
-CREATE UNIQUE INDEX `user_id_i`
-  ON `user` (`user_id`);
+CREATE UNIQUE INDEX "user_user_id_i"
+  ON "user" ("user_id");
 
-CREATE UNIQUE INDEX `name_i`
-  ON `user` (`name`);
+CREATE UNIQUE INDEX "user_name_i"
+  ON "user" ("name");
 
-CREATE UNIQUE INDEX `phone_i`
-  ON `user` (`phone`);
+CREATE UNIQUE INDEX "user_phone_i"
+  ON "user" ("phone");
 

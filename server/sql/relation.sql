@@ -2,16 +2,13 @@
  * compiler for C++.
  */
 
-CREATE DATABASE IF NOT EXISTS `huzch`;
-USE `huzch`;
-DROP TABLE IF EXISTS `relation`;
+DROP TABLE IF EXISTS "relation" CASCADE;
 
-CREATE TABLE `relation` (
-  `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  `user_id` varchar(64) NOT NULL,
-  `peer_id` varchar(64) NOT NULL)
- ENGINE=InnoDB;
+CREATE TABLE "relation" (
+  "id" BIGSERIAL NOT NULL PRIMARY KEY,
+  "user_id" varchar(64) NOT NULL,
+  "peer_id" varchar(64) NOT NULL);
 
-CREATE INDEX `user_id_i`
-  ON `relation` (`user_id`);
+CREATE INDEX "relation_user_id_i"
+  ON "relation" ("user_id");
 
