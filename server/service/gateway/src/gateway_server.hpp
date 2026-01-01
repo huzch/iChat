@@ -4,7 +4,6 @@
 #include "channel.hpp"
 #include "connection.hpp"
 #include "data_redis.hpp"
-#include "registry.hpp"
 #include "file.pb.h"
 #include "forward.pb.h"
 #include "friend.pb.h"
@@ -12,6 +11,7 @@
 #include "httplib.h"
 #include "message.pb.h"
 #include "notify.pb.h"
+#include "registry.hpp"
 #include "speech.pb.h"
 #include "user.pb.h"
 
@@ -49,8 +49,6 @@ namespace huzch {
 class GatewayServer {
  public:
   using Ptr = std::shared_ptr<GatewayServer>;
-  using CallBack =
-      std::function<void(const httplib::Request&, httplib::Response&)>;
 
  public:
   GatewayServer(int http_port, int websocket_port,
@@ -77,15 +75,13 @@ class GatewayServer {
     // 初始化asio框架中的io_service调度器
     _websocket_server.init_asio();
     // 设置connection开启回调函数
-    _websocket_server.set_open_handler(
-        std::bind(&GatewayServer::on_open, this, std::placeholders::_1));
+    _websocket_server.set_open_handler([this](auto&& hdl) { on_open(hdl); });
     // 设置connection关闭回调函数
     _websocket_server.set_close_handler(
-        std::bind(&GatewayServer::on_close, this, std::placeholders::_1));
+        [this](auto&& hdl) { this->on_close(hdl); });
     // 设置message回调函数
-    _websocket_server.set_message_handler(std::bind(&GatewayServer::on_message,
-                                                    this, std::placeholders::_1,
-                                                    std::placeholders::_2));
+    _websocket_server.set_message_handler(
+        [this](auto&& hdl, auto&& msg) { this->on_message(hdl, msg); });
     // 启用地址重用
     _websocket_server.set_reuse_addr(true);
     // 设置endpoint监听端口
@@ -93,128 +89,120 @@ class GatewayServer {
     // 启动服务器connection接受循环
     _websocket_server.start_accept();
 
-    _http_server.Post(
-        SPEECH_RECOGNIZE,
-        (CallBack)std::bind(&GatewayServer::SpeechRecognize, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        GET_SINGLE_FILE,
-        (CallBack)std::bind(&GatewayServer::GetSingleFile, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        GET_MULTI_FILE,
-        (CallBack)std::bind(&GatewayServer::GetMultiFile, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        PUT_SINGLE_FILE,
-        (CallBack)std::bind(&GatewayServer::PutSingleFile, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        PUT_MULTI_FILE,
-        (CallBack)std::bind(&GatewayServer::PutMultiFile, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        USER_REGISTER,
-        (CallBack)std::bind(&GatewayServer::UserRegister, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        USER_LOGIN,
-        (CallBack)std::bind(&GatewayServer::UserLogin, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        GET_PHONE_VERIFY_CODE,
-        (CallBack)std::bind(&GatewayServer::GetPhoneVerifyCode, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        PHONE_REGISTER,
-        (CallBack)std::bind(&GatewayServer::PhoneRegister, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        PHONE_LOGIN,
-        (CallBack)std::bind(&GatewayServer::PhoneLogin, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        GET_USER_INFO,
-        (CallBack)std::bind(&GatewayServer::GetUserInfo, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        USER_SEARCH,
-        (CallBack)std::bind(&GatewayServer::UserSearch, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        SET_USER_AVATAR,
-        (CallBack)std::bind(&GatewayServer::SetUserAvatar, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        SET_USER_NAME,
-        (CallBack)std::bind(&GatewayServer::SetUserName, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        SET_USER_PHONE,
-        (CallBack)std::bind(&GatewayServer::SetUserPhoneNumber, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        SET_USER_DESCRIPTION,
-        (CallBack)std::bind(&GatewayServer::SetUserDescription, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        NEW_MESSAGE,
-        (CallBack)std::bind(&GatewayServer::NewMessage, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        GET_HISTORY_MESSAGE,
-        (CallBack)std::bind(&GatewayServer::GetHistoryMessage, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        GET_RECENT_MESSAGE,
-        (CallBack)std::bind(&GatewayServer::GetRecentMessage, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        MESSAGE_SEARCH,
-        (CallBack)std::bind(&GatewayServer::MessageSearch, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        GET_FRIEND,
-        (CallBack)std::bind(&GatewayServer::GetFriend, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        FRIEND_REMOVE,
-        (CallBack)std::bind(&GatewayServer::FriendRemove, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        FRIEND_ADD_SEND,
-        (CallBack)std::bind(&GatewayServer::FriendAddSend, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        FRIEND_ADD_PROCESS,
-        (CallBack)std::bind(&GatewayServer::FriendAddProcess, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        GET_REQUESTER,
-        (CallBack)std::bind(&GatewayServer::GetRequester, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        GET_CHAT_SESSION,
-        (CallBack)std::bind(&GatewayServer::GetChatSession, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        CHAT_SESSION_CREATE,
-        (CallBack)std::bind(&GatewayServer::ChatSessionCreate, this,
-                            std::placeholders::_1, std::placeholders::_2));
-    _http_server.Post(
-        GET_CHAT_SESSION_MEMBER,
-        (CallBack)std::bind(&GatewayServer::GetChatSessionMember, this,
-                            std::placeholders::_1, std::placeholders::_2));
+    _http_server.Post(SPEECH_RECOGNIZE, [this](auto&& req, auto&& rsp) {
+      SpeechRecognize(req, rsp);
+    });
 
-	_http_server.set_logger([](const httplib::Request& req, const httplib::Response& res) {
-    // 这里的日志会在请求处理完成后打印
-    LOG_INFO("收到 HTTP 请求: {} {} | 状态码: {} | 客户端 IP: {} | Body 大小: {} bytes", 
-             req.method, 
-             req.path, 
-             res.status, 
-             req.remote_addr,
-             req.body.size());
-	});
+    _http_server.Post(GET_SINGLE_FILE, [this](auto&& req, auto&& rsp) {
+      GetSingleFile(req, rsp);
+    });
+
+    _http_server.Post(GET_MULTI_FILE, [this](auto&& req, auto&& rsp) {
+      GetMultiFile(req, rsp);
+    });
+
+    _http_server.Post(PUT_SINGLE_FILE, [this](auto&& req, auto&& rsp) {
+      PutSingleFile(req, rsp);
+    });
+
+    _http_server.Post(PUT_MULTI_FILE, [this](auto&& req, auto&& rsp) {
+      PutMultiFile(req, rsp);
+    });
+
+    _http_server.Post(USER_REGISTER, [this](auto&& req, auto&& rsp) {
+      UserRegister(req, rsp);
+    });
+
+    _http_server.Post(USER_LOGIN,
+                      [this](auto&& req, auto&& rsp) { UserLogin(req, rsp); });
+
+    _http_server.Post(GET_PHONE_VERIFY_CODE, [this](auto&& req, auto&& rsp) {
+      GetPhoneVerifyCode(req, rsp);
+    });
+
+    _http_server.Post(PHONE_REGISTER, [this](auto&& req, auto&& rsp) {
+      PhoneRegister(req, rsp);
+    });
+
+    _http_server.Post(PHONE_LOGIN,
+                      [this](auto&& req, auto&& rsp) { PhoneLogin(req, rsp); });
+
+    _http_server.Post(GET_USER_INFO, [this](auto&& req, auto&& rsp) {
+      GetUserInfo(req, rsp);
+    });
+
+    _http_server.Post(USER_SEARCH,
+                      [this](auto&& req, auto&& rsp) { UserSearch(req, rsp); });
+
+    _http_server.Post(SET_USER_AVATAR, [this](auto&& req, auto&& rsp) {
+      SetUserAvatar(req, rsp);
+    });
+
+    _http_server.Post(SET_USER_NAME, [this](auto&& req, auto&& rsp) {
+      SetUserName(req, rsp);
+    });
+
+    _http_server.Post(SET_USER_PHONE, [this](auto&& req, auto&& rsp) {
+      SetUserPhoneNumber(req, rsp);
+    });
+
+    _http_server.Post(SET_USER_DESCRIPTION, [this](auto&& req, auto&& rsp) {
+      SetUserDescription(req, rsp);
+    });
+
+    _http_server.Post(NEW_MESSAGE,
+                      [this](auto&& req, auto&& rsp) { NewMessage(req, rsp); });
+
+    _http_server.Post(GET_HISTORY_MESSAGE, [this](auto&& req, auto&& rsp) {
+      GetHistoryMessage(req, rsp);
+    });
+
+    _http_server.Post(GET_RECENT_MESSAGE, [this](auto&& req, auto&& rsp) {
+      GetRecentMessage(req, rsp);
+    });
+
+    _http_server.Post(MESSAGE_SEARCH, [this](auto&& req, auto&& rsp) {
+      MessageSearch(req, rsp);
+    });
+
+    _http_server.Post(GET_FRIEND,
+                      [this](auto&& req, auto&& rsp) { GetFriend(req, rsp); });
+
+    _http_server.Post(FRIEND_REMOVE, [this](auto&& req, auto&& rsp) {
+      FriendRemove(req, rsp);
+    });
+
+    _http_server.Post(FRIEND_ADD_SEND, [this](auto&& req, auto&& rsp) {
+      FriendAddSend(req, rsp);
+    });
+
+    _http_server.Post(FRIEND_ADD_PROCESS, [this](auto&& req, auto&& rsp) {
+      FriendAddProcess(req, rsp);
+    });
+
+    _http_server.Post(GET_REQUESTER, [this](auto&& req, auto&& rsp) {
+      GetRequester(req, rsp);
+    });
+
+    _http_server.Post(GET_CHAT_SESSION, [this](auto&& req, auto&& rsp) {
+      GetChatSession(req, rsp);
+    });
+
+    _http_server.Post(CHAT_SESSION_CREATE, [this](auto&& req, auto&& rsp) {
+      ChatSessionCreate(req, rsp);
+    });
+
+    _http_server.Post(GET_CHAT_SESSION_MEMBER, [this](auto&& req, auto&& rsp) {
+      GetChatSessionMember(req, rsp);
+    });
+
+    _http_server.set_logger([](auto&& req, auto&& rsp) {
+      // 这里的日志会在请求处理完成后打印
+      LOG_INFO(
+          "收到 HTTP 请求: {} {} | 状态码: {} | 客户端 IP: {} | Body 大小: {} "
+          "bytes",
+          req.method, req.path, rsp.status, req.remote_addr, req.body.size());
+    });
     _http_thread = std::thread(
         [this, http_port]() { _http_server.listen("0.0.0.0", http_port); });
     _http_thread.detach();
@@ -1725,11 +1713,12 @@ class GatewayServerBuilder {
     _channels->declare(base_dir + forward_service_name);
     _channels->declare(base_dir + message_service_name);
     _channels->declare(base_dir + friend_service_name);
-    auto put_cb = std::bind(&ChannelManager::on_service_online, _channels.get(),
-                            std::placeholders::_1, std::placeholders::_2);
-    auto del_cb =
-        std::bind(&ChannelManager::on_service_offline, _channels.get(),
-                  std::placeholders::_1, std::placeholders::_2);
+    auto put_cb = [this](auto&& inst, auto&& host) {
+      _channels->on_service_online(inst, host);
+    };
+    auto del_cb = [this](auto&& inst, auto&& host) {
+      _channels->on_service_offline(inst, host);
+    };
 
     _discovery_client = std::make_shared<ServiceDiscovery>(
         registry_host, base_dir, put_cb, del_cb);

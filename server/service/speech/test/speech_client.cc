@@ -20,12 +20,12 @@ int main(int argc, char* argv[]) {
   // 初始化rpc服务信道管理
   auto channels = std::make_shared<huzch::ChannelManager>();
   channels->declare(FLAGS_base_dir + FLAGS_speech_service_name);
-  auto put_cb =
-      std::bind(&huzch::ChannelManager::on_service_online, channels.get(),
-                std::placeholders::_1, std::placeholders::_2);
-  auto del_cb =
-      std::bind(&huzch::ChannelManager::on_service_offline, channels.get(),
-                std::placeholders::_1, std::placeholders::_2);
+  auto put_cb = [channels](auto&& inst, auto&& host) {
+    channels->on_service_online(inst, host);
+  };
+  auto del_cb = [channels](auto&& inst, auto&& host) {
+    channels->on_service_offline(inst, host);
+  };
 
   // 初始化服务发现
   auto discovery_client = std::make_shared<huzch::ServiceDiscovery>(

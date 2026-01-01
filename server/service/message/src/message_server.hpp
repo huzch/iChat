@@ -5,10 +5,10 @@
 #include "channel.hpp"
 #include "data_odb_message.hpp"
 #include "data_search.hpp"
-#include "registry.hpp"
 #include "file.pb.h"
 #include "message.pb.h"
 #include "mq.hpp"
+#include "registry.hpp"
 #include "user.pb.h"
 #include "utils.hpp"
 
@@ -47,8 +47,7 @@ class MessageServiceImpl : public MessageService {
     boost::posix_time::ptime end_time =
         boost::posix_time::from_time_t(request->end_time());
 
-    auto messages =
-        _odb_message->range(chat_session_id, start_time, end_time);
+    auto messages = _odb_message->range(chat_session_id, start_time, end_time);
 
     std::unordered_set<std::string> users_id;
     for (auto& message : messages) {
@@ -481,11 +480,12 @@ class MessageServerBuilder {
     _channels = std::make_shared<ChannelManager>();
     _channels->declare(base_dir + file_service_name);
     _channels->declare(base_dir + user_service_name);
-    auto put_cb = std::bind(&ChannelManager::on_service_online, _channels.get(),
-                            std::placeholders::_1, std::placeholders::_2);
-    auto del_cb =
-        std::bind(&ChannelManager::on_service_offline, _channels.get(),
-                  std::placeholders::_1, std::placeholders::_2);
+    auto put_cb = [this](auto&& inst, auto&& host) {
+      _channels->on_service_online(inst, host);
+    };
+    auto del_cb = [this](auto&& inst, auto&& host) {
+      _channels->on_service_offline(inst, host);
+    };
 
     _discovery_client = std::make_shared<ServiceDiscovery>(
         registry_host, base_dir, put_cb, del_cb);
@@ -493,7 +493,8 @@ class MessageServerBuilder {
 
   void init_mq_client(const std::string& user, const std::string& passwd,
                       const std::string& host, const std::string& exchange,
-                      const std::string& queue, const std::string& routing_key) {
+                      const std::string& queue,
+                      const std::string& routing_key) {
     _queue_name = queue;
     _mq_client = std::make_shared<MQClient>(user, passwd, host);
     _mq_client->declare(exchange, queue, routing_key);
@@ -504,11 +505,11 @@ class MessageServerBuilder {
   }
 
   void init_odb_client(const std::string& user, const std::string& passwd,
-                         const std::string& db, const std::string& host,
-                         size_t port, const std::string& charset,
-                         size_t max_connections) {
+                       const std::string& db, const std::string& host,
+                       size_t port, const std::string& charset,
+                       size_t max_connections) {
     _odb_client = ODBClientFactory::create(user, passwd, db, host, port,
-                                               charset, max_connections);
+                                           charset, max_connections);
   }
 
   void init_rpc_server(int port, int timeout, int num_threads) {
@@ -547,8 +548,9 @@ class MessageServerBuilder {
       abort();
     }
 
-    auto msg_cb = std::bind(&MessageServiceImpl::on_message, message_service,
-                            std::placeholders::_1, std::placeholders::_2);
+    auto msg_cb = [message_service](auto body, auto body_size) {
+      message_service->on_message(body, body_size);
+    };
     _mq_client->consume(_queue_name, msg_cb);
   }
 

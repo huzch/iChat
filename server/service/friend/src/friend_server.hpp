@@ -482,11 +482,12 @@ class FriendServerBuilder {
     _channels = std::make_shared<ChannelManager>();
     _channels->declare(base_dir + user_service_name);
     _channels->declare(base_dir + message_service_name);
-    auto put_cb = std::bind(&ChannelManager::on_service_online, _channels.get(),
-                            std::placeholders::_1, std::placeholders::_2);
-    auto del_cb =
-        std::bind(&ChannelManager::on_service_offline, _channels.get(),
-                  std::placeholders::_1, std::placeholders::_2);
+    auto put_cb = [this](auto&& inst, auto&& host) {
+      _channels->on_service_online(inst, host);
+    };
+    auto del_cb = [this](auto&& inst, auto&& host) {
+      _channels->on_service_offline(inst, host);
+    };
 
     _discovery_client = std::make_shared<ServiceDiscovery>(
         registry_host, base_dir, put_cb, del_cb);

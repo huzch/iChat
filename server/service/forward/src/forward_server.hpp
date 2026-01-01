@@ -4,9 +4,9 @@
 #include "base.pb.h"
 #include "channel.hpp"
 #include "data_odb_session_member.hpp"
-#include "registry.hpp"
 #include "forward.pb.h"
 #include "mq.hpp"
+#include "registry.hpp"
 #include "user.pb.h"
 #include "utils.hpp"
 
@@ -19,8 +19,7 @@ class ForwardServiceImpl : public ForwardService {
                      const MQClient::Ptr& mq_client,
                      const std::string& user_service_name,
                      const ChannelManager::Ptr& channels)
-      : _odb_session_member(
-            std::make_shared<SessionMemberTable>(odb_client)),
+      : _odb_session_member(std::make_shared<SessionMemberTable>(odb_client)),
         _exchange_name(exchange_name),
         _mq_client(mq_client),
         _user_service_name(user_service_name),
@@ -127,11 +126,12 @@ class ForwardServerBuilder {
     _user_service_name = base_dir + service_name;
     _channels = std::make_shared<ChannelManager>();
     _channels->declare(base_dir + service_name);
-    auto put_cb = std::bind(&ChannelManager::on_service_online, _channels.get(),
-                            std::placeholders::_1, std::placeholders::_2);
-    auto del_cb =
-        std::bind(&ChannelManager::on_service_offline, _channels.get(),
-                  std::placeholders::_1, std::placeholders::_2);
+    auto put_cb = [this](auto&& inst, auto&& host) {
+      _channels->on_service_online(inst, host);
+    };
+    auto del_cb = [this](auto&& inst, auto&& host) {
+      _channels->on_service_offline(inst, host);
+    };
 
     _discovery_client = std::make_shared<ServiceDiscovery>(
         registry_host, base_dir, put_cb, del_cb);
@@ -139,18 +139,19 @@ class ForwardServerBuilder {
 
   void init_mq_client(const std::string& user, const std::string& passwd,
                       const std::string& host, const std::string& exchange,
-                      const std::string& queue, const std::string& routing_key) {
+                      const std::string& queue,
+                      const std::string& routing_key) {
     _exchange_name = exchange;
     _mq_client = std::make_shared<MQClient>(user, passwd, host);
     _mq_client->declare(exchange, queue, routing_key);
   }
 
   void init_odb_client(const std::string& user, const std::string& passwd,
-                         const std::string& db, const std::string& host,
-                         size_t port, const std::string& charset,
-                         size_t max_connections) {
+                       const std::string& db, const std::string& host,
+                       size_t port, const std::string& charset,
+                       size_t max_connections) {
     _odb_client = ODBClientFactory::create(user, passwd, db, host, port,
-                                               charset, max_connections);
+                                           charset, max_connections);
   }
 
   void init_rpc_server(int port, int timeout, int num_threads) {
@@ -165,9 +166,8 @@ class ForwardServerBuilder {
     }
 
     _server = std::make_shared<brpc::Server>();
-    auto forward_service =
-        new ForwardServiceImpl(_odb_client, _exchange_name, _mq_client,
-                               _user_service_name, _channels);
+    auto forward_service = new ForwardServiceImpl(
+        _odb_client, _exchange_name, _mq_client, _user_service_name, _channels);
     int ret = _server->AddService(forward_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
     if (ret == -1) {
