@@ -115,7 +115,7 @@
               </template>
               <template v-else-if="msg.message.messageType === 1 || msg.message.messageType === 'SPEECH'">
                 <div class="voice-msg-wrapper">
-                  <div class="voice-msg" :class="{ 'playing': playingMessageId === msg.messageId }" @click="playVoice(msg)">
+                  <div class="voice-msg" :class="{ 'playing': playingMessageId == msg.messageId }" @click="playVoice(msg)">
                     <div class="voice-icon-wrapper">
                       <div class="voice-wave"></div>
                       <div class="voice-wave delay-1"></div>
@@ -642,40 +642,112 @@ const sendVoiceMessage = async (blob) => {
   }
 };
 
-const playVoice = (msg) => {
-  const content = msg.message.speechMessage?.fileContent;
-  if (!content) return;
+const playVoice = async (msg) => {
+  // 立即开始动画，增加交互反馈
+  playingMessageId.value = msg.messageId;
+  
+  let content = msg.message.speechMessage?.fileContent;
+  const fileId = msg.message.speechMessage?.fileId;
+
+  // 如果没有内容但有 fileId，则去文件服务下载
+  if (!content && fileId) {
+    try {
+      const rsp = await sendRequest(
+        '/file/get_single_file',
+        'huzch.GetSingleFileReq',
+        'huzch.GetSingleFileRsp',
+        {
+          fileId: fileId,
+          userId: currentUserId.value,
+          loginSessionId: props.currentUser.sessionId
+        }
+      );
+      if (rsp.success && rsp.fileData) {
+        content = rsp.fileData.fileContent;
+        msg.message.speechMessage.fileContent = content; // 缓存
+      }
+    } catch (e) {
+      console.error("下载语音文件失败", e);
+    }
+  }
+
+  if (!content) {
+    playingMessageId.value = null;
+    ElMessage.warning('语音内容加载失败');
+    return;
+  }
   
   let blob;
-  if (typeof content === 'string') {
-    // 处理 base64 字符串
-    const binary = atob(content);
-    const array = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-        array[i] = binary.charCodeAt(i);
+  try {
+    if (typeof content === 'string') {
+      const binary = atob(content);
+      const array = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+      blob = new Blob([array], { type: 'audio/webm' });
+    } else if (content instanceof Uint8Array || ArrayBuffer.isView(content)) {
+      blob = new Blob([content], { type: 'audio/webm' });
+    } else if (content.data && Array.isArray(content.data)) {
+      // 处理某些序列化后的对象格式 {type: 'Buffer', data: [...]}
+      blob = new Blob([new Uint8Array(content.data)], { type: 'audio/webm' });
+    } else {
+      blob = new Blob([content], { type: 'audio/webm' });
     }
-    blob = new Blob([array], { type: 'audio/webm' });
-  } else {
-    // 处理字节数组
-    blob = new Blob([content], { type: 'audio/webm' });
+  } catch (e) {
+    console.error("处理语音数据失败", e);
+    playingMessageId.value = null;
+    return;
   }
   
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
   
-  playingMessageId.value = msg.messageId;
   audio.onended = () => {
     playingMessageId.value = null;
+    URL.revokeObjectURL(url);
   };
   audio.onerror = () => {
     playingMessageId.value = null;
+    URL.revokeObjectURL(url);
+    ElMessage.error('播放失败');
   };
   
-  audio.play();
+  try {
+    await audio.play();
+  } catch (err) {
+    console.error("播放被拦截", err);
+    // 某些浏览器在异步操作后会拦截 play()
+    // 如果拦截了，点击一下可能还是没声音，但至少动画会消失
+    playingMessageId.value = null;
+    ElMessage.info('请再次点击播放（浏览器安全限制）');
+  }
 };
 
 const recognizeSpeech = async (msg) => {
-  const content = msg.message.speechMessage?.fileContent;
+  let content = msg.message.speechMessage?.fileContent;
+  
+  // 如果没有内容但有 fileId，则去文件服务下载
+  const fileId = msg.message.speechMessage?.fileId;
+  if (!content && fileId) {
+    try {
+      const rsp = await sendRequest(
+        '/file/get_single_file',
+        'huzch.GetSingleFileReq',
+        'huzch.GetSingleFileRsp',
+        {
+          fileId: fileId,
+          userId: currentUserId.value,
+          loginSessionId: props.currentUser.sessionId
+        }
+      );
+      if (rsp.success && rsp.fileData) {
+        content = rsp.fileData.fileContent;
+        msg.message.speechMessage.fileContent = content;
+      }
+    } catch (e) {
+      console.error("下载语音用于识别失败", e);
+    }
+  }
+
   if (!content) return;
 
   let uint8Array;
@@ -683,7 +755,7 @@ const recognizeSpeech = async (msg) => {
     const binary = atob(content);
     uint8Array = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
-      uint8Array[i] = binary.charCodeAt(i);
+        uint8Array[i] = binary.charCodeAt(i);
     }
   } else {
     uint8Array = new Uint8Array(content);
@@ -1641,23 +1713,23 @@ const getSenderAvatar = (msg) => {
 }
 
 .voice-wave {
-  width: 2px;
+  width: 3px;
   height: 8px;
   background-color: #333;
   border-radius: 1px;
 }
 
-.playing .voice-wave {
+.voice-msg.playing .voice-wave {
   animation: voice-pulse 0.8s infinite ease-in-out;
 }
 
-.delay-1 { animation-delay: 0.2s !important; }
-.delay-2 { animation-delay: 0.4s !important; }
+.delay-1 { animation-delay: 0.15s !important; }
+.delay-2 { animation-delay: 0.3s !important; }
 
 @keyframes voice-pulse {
-  0% { height: 8px; }
+  0% { height: 6px; }
   50% { height: 16px; }
-  100% { height: 8px; }
+  100% { height: 6px; }
 }
 
 .voice-duration {
