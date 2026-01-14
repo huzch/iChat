@@ -3,8 +3,8 @@
     <!-- 左侧侧边栏：导航 -->
     <div class="nav-sidebar">
       <div class="avatar-wrapper" @click="showProfile" style="cursor: pointer;">
-        <el-avatar :size="40" :src="currentUser.avatarUrl || defaultAvatar" />
-        <div class="current-username">{{ currentUser.username }}</div>
+        <el-avatar :size="40" shape="square" :src="userProfile.avatar ? 'data:image/png;base64,' + userProfile.avatar : (currentUser.avatarUrl || defaultAvatar)" />
+        <div class="current-username">{{ userProfile.name || currentUser.username }}</div>
       </div>
       <div class="nav-icons">
         <el-icon 
@@ -128,6 +128,15 @@
                   </div>
                 </div>
               </template>
+              <template v-else-if="msg.message.messageType === 2 || msg.message.messageType === 'IMAGE'">
+                <el-image 
+                  class="img-msg"
+                  :src="'data:image/png;base64,' + msg.message.imageMessage.fileContent" 
+                  :preview-src-list="['data:image/png;base64,' + msg.message.imageMessage.fileContent]"
+                  fit="contain"
+                  preview-teleported
+                />
+              </template>
               <template v-else-if="msg.message.messageType === 3 || msg.message.messageType === 'FILE'">
                 <div class="file-msg" @click="downloadFile(msg)">
                   <el-icon class="file-icon"><Document /></el-icon>
@@ -153,6 +162,14 @@
             style="display: none" 
             @change="handleFileChange"
           />
+          <input 
+            type="file" 
+            ref="imageInputRef" 
+            style="display: none" 
+            accept="image/*"
+            @change="handleImageChange"
+          />
+          <el-icon class="toolbar-icon" @click="triggerImageUpload"><Picture /></el-icon>
           <el-icon class="toolbar-icon" @click="triggerFileUpload"><Folder /></el-icon>
           <el-tooltip content="按住录音" placement="top">
             <el-icon 
@@ -185,7 +202,6 @@
       <div class="profile-content">
         <div class="avatar-section">
           <el-upload
-            v-if="isEditingProfile"
             class="avatar-uploader"
             action="#"
             :show-file-list="false"
@@ -193,11 +209,10 @@
             :on-change="handleAvatarChange"
           >
             <div class="avatar-edit-overlay">
-              <el-avatar :size="80" :src="editProfileForm.avatarUrl || defaultAvatar" />
+              <el-avatar :size="80" shape="square" :src="editProfileForm.avatarUrl || (userProfile.avatar ? 'data:image/png;base64,' + userProfile.avatar : defaultAvatar)" />
               <div class="overlay-text">更换头像</div>
             </div>
           </el-upload>
-          <el-avatar v-else :size="80" :src="userProfile.avatar ? 'data:image/png;base64,' + userProfile.avatar : defaultAvatar" />
         </div>
 
         <div v-if="!isEditingProfile" class="profile-info-view">
@@ -299,7 +314,7 @@
 
 <script setup>
 import { ref, onMounted, nextTick, watch, reactive, computed } from 'vue';
-import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close, Bell, CirclePlus, Document } from '@element-plus/icons-vue';
+import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close, Bell, CirclePlus, Document, Picture } from '@element-plus/icons-vue';
 import { sendRequest } from '../api/client';
 import { getProtoType } from '../api/proto';
 import { WebSocketClient } from '../api/ws';
@@ -349,6 +364,7 @@ const messages = ref([]);
 const inputMessage = ref('');
 const messageListRef = ref(null);
 const fileInputRef = ref(null);
+const imageInputRef = ref(null);
 let wsClient = null;
 
 // 个人资料显隐
@@ -382,6 +398,50 @@ const handleFileChange = async (event) => {
   reader.readAsArrayBuffer(file);
   // 重置 input 以允许再次选择同一文件
   event.target.value = '';
+};
+
+const triggerImageUpload = () => {
+  imageInputRef.value.click();
+};
+
+const handleImageChange = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const uint8Array = new Uint8Array(e.target.result);
+    await sendImageMessage(uint8Array);
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+};
+
+const sendImageMessage = async (content) => {
+  if (!currentSession.value) return;
+  try {
+    const rsp = await sendRequest(
+      '/forward/new_message',
+      'huzch.NewMessageReq',
+      'huzch.NewMessageRsp',
+      {
+        chatSessionId: currentSession.value.chatSessionId,
+        userId: currentUserId.value,
+        message: {
+          messageType: 2, // IMAGE
+          imageMessage: {
+            fileContent: content
+          }
+        },
+        loginSessionId: props.currentUser.sessionId
+      }
+    );
+    if (!rsp.success) {
+      ElMessage.error('图片发送失败');
+    }
+  } catch (e) {
+    console.error("发送图片失败", e);
+  }
 };
 
 const sendFileMessage = async (name, size, content) => {
@@ -702,6 +762,11 @@ const handleAvatarChange = (file) => {
   const reader = new FileReader();
   reader.onload = (e) => {
     editProfileForm.avatarFile = new Uint8Array(e.target.result);
+    if (!isEditingProfile.value) {
+      isEditingProfile.value = true;
+      editProfileForm.name = userProfile.value.name;
+      editProfileForm.description = userProfile.value.description;
+    }
   };
   reader.readAsArrayBuffer(file.raw);
 };
@@ -1683,6 +1748,14 @@ const getSenderAvatar = (msg) => {
   font-size: 12px;
   color: #999;
   margin-top: 2px;
+}
+
+.img-msg {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: block;
 }
 
 textarea {
