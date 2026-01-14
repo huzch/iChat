@@ -16,11 +16,13 @@ class ForwardServiceImpl : public ForwardService {
  public:
   ForwardServiceImpl(const std::shared_ptr<odb::core::database>& odb_client,
                      const std::string& exchange_name,
+                     const std::string& routing_key,
                      const MQClient::Ptr& mq_client,
                      const std::string& user_service_name,
                      const ChannelManager::Ptr& channels)
       : _odb_session_member(std::make_shared<SessionMemberTable>(odb_client)),
         _exchange_name(exchange_name),
+        _routing_key(routing_key),
         _mq_client(mq_client),
         _user_service_name(user_service_name),
         _channels(channels) {}
@@ -31,6 +33,7 @@ class ForwardServiceImpl : public ForwardService {
     brpc::ClosureGuard rpc_guard(done);
     std::string request_id = request->request_id();
     response->set_request_id(request_id);
+    LOG_INFO("{} 收到新消息请求: 来自用户 {} 会话 {}", request_id, request->user_id(), request->chat_session_id());
 
     auto err_rsp = [response](const std::string& errmsg) {
       response->set_success(false);
@@ -73,12 +76,13 @@ class ForwardServiceImpl : public ForwardService {
 
     // 将封装好的消息信息发布到消息队列，等待消息服务进行消息持久化
     bool ret =
-        _mq_client->publish(_exchange_name, message_info.SerializeAsString());
+        _mq_client->publish(_exchange_name, message_info.SerializeAsString(), _routing_key);
     if (!ret) {
       LOG_ERROR("{} 持久化消息发布失败", request_id);
       err_rsp("持久化消息发布失败");
       return;
     }
+    LOG_INFO("{} 消息发布到 MQ 成功", request_id);
 
     response->set_success(true);
     response->mutable_message_info()->CopyFrom(message_info);
@@ -91,6 +95,7 @@ class ForwardServiceImpl : public ForwardService {
   SessionMemberTable::Ptr _odb_session_member;
 
   std::string _exchange_name;
+  std::string _routing_key;
   MQClient::Ptr _mq_client;
   std::string _user_service_name;
   ChannelManager::Ptr _channels;
@@ -142,6 +147,7 @@ class ForwardServerBuilder {
                       const std::string& queue,
                       const std::string& routing_key) {
     _exchange_name = exchange;
+    _routing_key = routing_key;
     _mq_client = std::make_shared<MQClient>(user, passwd, host);
     _mq_client->declare(exchange, queue, routing_key);
   }
@@ -167,7 +173,7 @@ class ForwardServerBuilder {
 
     _server = std::make_shared<brpc::Server>();
     auto forward_service = new ForwardServiceImpl(
-        _odb_client, _exchange_name, _mq_client, _user_service_name, _channels);
+        _odb_client, _exchange_name, _routing_key, _mq_client, _user_service_name, _channels);
     int ret = _server->AddService(forward_service,
                                   brpc::ServiceOwnership::SERVER_OWNS_SERVICE);
     if (ret == -1) {
@@ -213,6 +219,7 @@ class ForwardServerBuilder {
   ServiceRegistry::Ptr _registry_client;
   ServiceDiscovery::Ptr _discovery_client;
   std::string _exchange_name;
+  std::string _routing_key;
   MQClient::Ptr _mq_client;
   std::shared_ptr<odb::core::database> _odb_client;
   std::shared_ptr<brpc::Server> _server;

@@ -278,6 +278,7 @@ class MessageServiceImpl : public MessageService {
       LOG_ERROR("消息信息反序列化失败");
       return;
     }
+    LOG_INFO("收到 MQ 转发的消息: {}", message_info.message_id());
 
     std::string content, file_id, file_name;
     uint64_t file_size;

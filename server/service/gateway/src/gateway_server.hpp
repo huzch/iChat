@@ -1018,8 +1018,8 @@ class GatewayServer {
                          websocketpp::frame::opcode::value::binary);
       }
     }
-    rsp.clear_message_info();
-    rsp.clear_targets_id();
+    // rsp.clear_message_info();
+    // rsp.clear_targets_id();
 
     response.set_content(rsp.SerializeAsString(), "application/protobuf");
   }

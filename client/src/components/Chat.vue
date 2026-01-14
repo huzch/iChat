@@ -7,30 +7,59 @@
         <div class="current-username">{{ currentUser.username }}</div>
       </div>
       <div class="nav-icons">
-        <el-icon class="nav-icon active"><ChatDotRound /></el-icon>
-        <el-icon class="nav-icon"><User /></el-icon>
+        <el-icon 
+          class="nav-icon" 
+          :class="{ active: activeTab === 'chat' }" 
+          @click="activeTab = 'chat'"
+        ><ChatDotRound /></el-icon>
+        <el-icon 
+          class="nav-icon" 
+          :class="{ active: activeTab === 'requests' }" 
+          @click="showFriendRequests"
+        ><User /></el-icon>
       </div>
     </div>
 
-    <!-- Middle Sidebar: Session List -->
+    <!-- Middle Sidebar: Session List or Friend Requests -->
     <div class="list-sidebar">
-      <div class="search-bar">
-        <el-input v-model="searchText" placeholder="Search" prefix-icon="Search" size="small" style="flex: 1; margin-right: 5px;" />
-        <el-button circle size="small" :icon="Plus" @click="showAddFriend" />
-      </div>
-      <div class="session-list">
-        <div 
-          v-for="session in sessions" 
-          :key="session.chatSessionId" 
-          class="session-item"
-          :class="{ active: currentSession?.chatSessionId === session.chatSessionId }"
-          @click="selectSession(session)"
-        >
-          <el-avatar :size="40" shape="square" :src="session.avatarUrl || defaultAvatar" />
-          <div class="session-info">
-            <div class="session-name">{{ session.chatSessionName || 'Unknown' }}</div>
-            <div class="session-preview">{{ getLastMessagePreview(session) }}</div>
+      <div v-if="activeTab === 'chat'">
+        <div class="search-bar">
+          <el-input v-model="searchText" placeholder="Search" prefix-icon="Search" size="small" style="flex: 1; margin-right: 5px;" />
+          <el-button circle size="small" :icon="Plus" @click="showAddFriend" />
+        </div>
+        <div class="session-list">
+          <div 
+            v-for="session in sessions" 
+            :key="session.chatSessionId" 
+            class="session-item"
+            :class="{ active: currentSession?.chatSessionId === session.chatSessionId }"
+            @click="selectSession(session)"
+          >
+            <el-avatar :size="40" shape="square" :src="session.avatar ? 'data:image/png;base64,' + session.avatar : defaultAvatar" />
+            <div class="session-info">
+              <div class="session-name">{{ session.chatSessionName || 'Unknown' }}</div>
+              <div class="session-preview">{{ getLastMessagePreview(session) }}</div>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <div v-else-if="activeTab === 'requests'" class="requests-view">
+        <div class="sidebar-header">
+          <h3>Friend Requests</h3>
+        </div>
+        <div class="requests-list">
+          <div v-for="req in friendRequests" :key="req.userId" class="request-item">
+            <el-avatar :size="40" shape="square" :src="req.avatar ? 'data:image/png;base64,' + req.avatar : defaultAvatar" />
+            <div class="request-info">
+              <div class="request-name">{{ req.name }}</div>
+              <div class="request-actions">
+                <el-button type="success" size="small" :icon="Check" circle @click="processRequest(req, true)" />
+                <el-button type="danger" size="small" :icon="Close" circle @click="processRequest(req, false)" />
+              </div>
+            </div>
+          </div>
+          <el-empty v-if="friendRequests.length === 0" description="No requests" :image-size="60" />
         </div>
       </div>
     </div>
@@ -95,7 +124,7 @@
               <div class="overlay-text">Change</div>
             </div>
           </el-upload>
-          <el-avatar v-else :size="80" :src="userProfile.avatar ? 'data:image/png;base64,' + btoa(String.fromCharCode(...new Uint8Array(userProfile.avatar))) : defaultAvatar" />
+          <el-avatar v-else :size="80" :src="userProfile.avatar ? 'data:image/png;base64,' + userProfile.avatar : defaultAvatar" />
         </div>
 
         <div v-if="!isEditingProfile" class="profile-info-view">
@@ -139,7 +168,7 @@
         
         <div v-if="searchResults.length > 0" class="search-results">
           <div v-for="user in searchResults" :key="user.userId" class="user-result-item">
-            <el-avatar :size="36" :src="user.avatar ? 'data:image/png;base64,' + btoa(String.fromCharCode(...new Uint8Array(user.avatar))) : defaultAvatar" />
+            <el-avatar :size="36" :src="user.avatar ? 'data:image/png;base64,' + user.avatar : defaultAvatar" />
             <div class="user-result-info">
               <div class="name">{{ user.name }}</div>
               <div class="id">ID: {{ user.userId }}</div>
@@ -159,6 +188,7 @@
 import { ref, onMounted, nextTick, watch, reactive } from 'vue';
 import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close } from '@element-plus/icons-vue';
 import { sendRequest } from '../api/client';
+import { getProtoType } from '../api/proto';
 import { WebSocketClient } from '../api/ws';
 import { ElMessage } from 'element-plus';
 
@@ -170,8 +200,10 @@ const props = defineProps({
 });
 
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png';
+const activeTab = ref('chat');
 const searchText = ref('');
 const sessions = ref([]);
+const friendRequests = ref([]);
 const currentSession = ref(null);
 const messages = ref([]);
 const inputMessage = ref('');
@@ -360,6 +392,62 @@ const addFriend = async (user) => {
   }
 };
 
+// Friend Requests Logic
+const showFriendRequests = async () => {
+  activeTab.value = 'requests';
+  await fetchFriendRequests();
+};
+
+const fetchFriendRequests = async () => {
+  try {
+    const rsp = await sendRequest(
+      '/friend/get_requester',
+      'huzch.GetRequesterReq',
+      'huzch.GetRequesterRsp',
+      {
+        userId: props.currentUser.userId,
+        loginSessionId: props.currentUser.sessionId
+      }
+    );
+    if (rsp.success) {
+      friendRequests.value = rsp.requestersInfo || [];
+    }
+  } catch (e) {
+    console.error("Failed to fetch friend requests", e);
+  }
+};
+
+const processRequest = async (req, agree) => {
+  try {
+    const rsp = await sendRequest(
+      '/friend/friend_add_process',
+      'huzch.FriendAddProcessReq',
+      'huzch.FriendAddProcessRsp',
+      {
+        userId: props.currentUser.userId,
+        requesterId: req.userId,
+        agree: agree,
+        loginSessionId: props.currentUser.sessionId
+      }
+    );
+    
+    if (rsp.success) {
+      ElMessage.success(agree ? 'Request accepted' : 'Request rejected');
+      // Refresh list
+      await fetchFriendRequests();
+      if (agree) {
+        // If agreed, refresh sessions too as a new chat might be created
+        await fetchSessions();
+      }
+    } else {
+      ElMessage.error(rsp.errmsg || 'Failed to process request');
+    }
+  } catch (e) {
+    console.error("Process request failed", e);
+    ElMessage.error('Network error');
+  }
+};
+
 // Fetch sessions on mount
 onMounted(async () => {
   await fetchSessions();
@@ -375,12 +463,66 @@ const initWebSocket = () => {
   wsClient.connect();
 };
 
-const handleWsMessage = (data) => {
-  // Decode NotifyMessage
-  // For now, just log it. Implementing full notify handling requires loading 'huzch.NotifyMessage'
-  console.log("Received WS message", data);
-  // If it's a new message for current session, append it
-  // We need to decode it properly.
+const handleWsMessage = async (data) => {
+  try {
+    const NotifyMessage = await getProtoType('huzch.NotifyMessage');
+    const decoded = NotifyMessage.decode(new Uint8Array(data));
+    const notify = NotifyMessage.toObject(decoded, {
+      enums: String,
+      bytes: String,
+      longs: String,
+      defaults: true
+    });
+
+    console.log("Received Notify:", notify);
+
+    if (notify.notifyType === 'FRIEND_ADD_SEND_NOTIFY' || notify.notifyType === 0) {
+      ElMessage.info('You have a new friend request');
+      if (activeTab.value === 'requests') {
+        await fetchFriendRequests();
+      }
+    } else if (notify.notifyType === 'FRIEND_ADD_PROCESS_NOTIFY' || notify.notifyType === 1) {
+      const info = notify.friendAddProcess;
+      if (info && info.agree) {
+        ElMessage.success(`${info.userInfo.name} accepted your friend request`);
+        await fetchSessions();
+      } else {
+        ElMessage.warning(`${info.userInfo.name} rejected your friend request`);
+      }
+    } else if (notify.notifyType === 'FRIEND_REMOVE_NOTIFY' || notify.notifyType === 2) {
+      ElMessage.info('A friend was removed');
+      await fetchSessions();
+    } else if (notify.notifyType === 'CHAT_SESSION_CREATE_NOTIFY' || notify.notifyType === 3) {
+      // New chat session created (e.g. after friend request accepted)
+      await fetchSessions();
+    } else if (notify.notifyType === 'CHAT_MESSAGE_NOTIFY' || notify.notifyType === 4 ) {
+      const msgInfo = notify.newMessageInfo ? notify.newMessageInfo.messageInfo : null;
+      if (!msgInfo) return;
+
+      // Update session list preview
+      const session = sessions.value.find(s => s.chatSessionId === msgInfo.chatSessionId);
+      if (session) {
+        session.prevMessage = msgInfo;
+        // Move session to top
+        const index = sessions.value.indexOf(session);
+        if (index > 0) {
+          sessions.value.splice(index, 1);
+          sessions.value.unshift(session);
+        }
+      }
+
+      // If it's the current session, add to message list
+      if (currentSession.value && currentSession.value.chatSessionId === msgInfo.chatSessionId) {
+        // Check if message already exists (to avoid duplicate from sendMessage)
+        if (!messages.value.find(m => m.messageId === msgInfo.messageId)) {
+          messages.value.push(msgInfo);
+          scrollToBottom();
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Failed to handle WS message", e);
+  }
 };
 
 const fetchSessions = async () => {
@@ -443,10 +585,10 @@ const sendMessage = async () => {
       'huzch.NewMessageRsp',
       {
         userId: props.currentUser.userId,
-        chatSessionId: currentSession.value.chat_session_id,
+        chatSessionId: currentSession.value.chatSessionId,
         loginSessionId: props.currentUser.sessionId,
         message: {
-          messageType: 'STRING', // Enum value 0
+          messageType: 0,
           stringMessage: {
             content: content
           }
@@ -459,6 +601,17 @@ const sendMessage = async () => {
       // Usually wait for WS or response.
       // The response contains message_info.
       if (rsp.messageInfo) {
+        // Update session list preview
+        const session = sessions.value.find(s => s.chatSessionId === currentSession.value.chatSessionId);
+        if (session) {
+          session.prevMessage = rsp.messageInfo;
+          // Move to top
+          const index = sessions.value.indexOf(session);
+          if (index > 0) {
+            sessions.value.splice(index, 1);
+            sessions.value.unshift(session);
+          }
+        }
         messages.value.push(rsp.messageInfo);
         scrollToBottom();
       }
@@ -496,8 +649,10 @@ const getMessageContent = (msg) => {
 };
 
 const getSenderAvatar = (msg) => {
-  // In a real app, we'd look up user info from a cache or the message itself if it contains sender info
-  return msg.senderAvatar || defaultAvatar; 
+  if (msg.sender && msg.sender.avatar) {
+    return 'data:image/png;base64,' + msg.sender.avatar;
+  }
+  return defaultAvatar; 
 };
 
 </script>
@@ -644,6 +799,53 @@ const getSenderAvatar = (msg) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.requests-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidebar-header {
+  padding: 15px;
+  background-color: #f7f7f7;
+  border-bottom: 1px solid #d6d6d6;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.requests-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.request-item {
+  display: flex;
+  padding: 12px;
+  border-bottom: 1px solid #dcdcdc;
+  align-items: center;
+}
+
+.request-info {
+  margin-left: 10px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.request-name {
+  font-weight: 500;
+}
+
+.request-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .chat-window {
