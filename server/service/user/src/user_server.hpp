@@ -146,11 +146,11 @@ class UserServiceImpl : public UserService {
     };
     std::string phone = request->phone_number();
 
-    if (!check_phone(phone)) {
-      LOG_ERROR("{} 手机号格式不合法: {}", request_id, phone);
-      err_rsp("手机号格式不合法");
-      return;
-    }
+    // if (!check_phone(phone)) {
+    //   LOG_ERROR("{} 手机号格式不合法: {}", request_id, phone);
+    //   err_rsp("手机号格式不合法");
+    //   return;
+    // }
 
     std::string code_id = uuid();
     std::string code = verify_code();

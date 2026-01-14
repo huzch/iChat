@@ -218,9 +218,36 @@
         <div v-if="!isEditingProfile" class="profile-info-view">
           <h3>{{ userProfile.name }}</h3>
           <p class="info-item"><span class="label">ID:</span> {{ userProfile.userId }}</p>
-          <p class="info-item"><span class="label">手机号:</span> {{ userProfile.phone || '未绑定' }}</p>
+          <p class="info-item"><span class="label">手机号:</span> 
+            {{ userProfile.phone || '未绑定' }}
+            <el-link type="primary" :underline="false" style="font-size: 12px; margin-left: 10px;" @click="startBindPhone">
+              {{ userProfile.phone ? '更换' : '绑定' }}
+            </el-link>
+          </p>
           <p class="info-item"><span class="label">简介:</span> {{ userProfile.description || '暂无简介' }}</p>
-          <el-button type="primary" :icon="Edit" @click="startEditProfile" style="margin-top: 20px; width: 100%;">编辑资料</el-button>
+          
+          <div v-if="isBindingPhone" class="phone-bind-section">
+            <el-divider>验证新手机</el-divider>
+            <el-form label-width="0">
+              <el-form-item>
+                <el-input v-model="editProfileForm.newPhone" placeholder="新手机号" prefix-icon="Iphone" />
+              </el-form-item>
+              <el-form-item>
+                <div style="display: flex; gap: 10px; width: 100%;">
+                  <el-input v-model="editProfileForm.verifyCode" placeholder="验证码" prefix-icon="Ticket" />
+                  <el-button @click="getPhoneVerifyCode" :disabled="!!phoneCountdown">
+                    {{ phoneCountdown ? `${phoneCountdown}s` : '获取' }}
+                  </el-button>
+                </div>
+              </el-form-item>
+              <div style="display: flex; gap: 10px;">
+                <el-button size="small" style="flex: 1;" @click="cancelBindPhone">取消</el-button>
+                <el-button size="small" type="primary" style="flex: 1;" @click="submitBindPhone">确定</el-button>
+              </div>
+            </el-form>
+          </div>
+
+          <el-button v-if="!isBindingPhone" type="primary" :icon="Edit" @click="startEditProfile" style="margin-top: 20px; width: 100%;">编辑资料</el-button>
         </div>
 
         <div v-else class="profile-info-edit">
@@ -314,7 +341,7 @@
 
 <script setup>
 import { ref, onMounted, nextTick, watch, reactive, computed } from 'vue';
-import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close, Bell, CirclePlus, Document, Picture } from '@element-plus/icons-vue';
+import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close, Bell, CirclePlus, Document, Picture, Iphone, Ticket } from '@element-plus/icons-vue';
 import { sendRequest } from '../api/client';
 import { getProtoType } from '../api/proto';
 import { WebSocketClient } from '../api/ws';
@@ -372,12 +399,17 @@ const profileVisible = ref(false);
 const userProfile = ref({});
 const currentUserId = computed(() => userProfile.value?.userId || props.currentUser.userId);
 const isEditingProfile = ref(false);
+const isBindingPhone = ref(false);
+const phoneCountdown = ref(0);
+const phoneVerifyCodeId = ref('');
 const savingProfile = ref(false);
 const editProfileForm = reactive({
   name: '',
   description: '',
   avatarUrl: '',
-  avatarFile: null
+  avatarFile: null,
+  newPhone: '',
+  verifyCode: ''
 });
 
 // 文件发送逻辑
@@ -820,13 +852,79 @@ const resetProfileMode = () => {
 const startEditProfile = () => {
   editProfileForm.name = userProfile.value.name;
   editProfileForm.description = userProfile.value.description;
-  editProfileForm.avatarUrl = userProfile.value.avatar ? 'data:image/png;base64,' + btoa(String.fromCharCode(...new Uint8Array(userProfile.value.avatar))) : defaultAvatar;
+  editProfileForm.avatarUrl = userProfile.value.avatar ? 'data:image/png;base64,' + userProfile.value.avatar : defaultAvatar;
   editProfileForm.avatarFile = null;
   isEditingProfile.value = true;
 };
 
 const cancelEditProfile = () => {
   isEditingProfile.value = false;
+};
+
+const startBindPhone = () => {
+  isBindingPhone.value = true;
+};
+
+const cancelBindPhone = () => {
+  isBindingPhone.value = false;
+  editProfileForm.newPhone = '';
+  editProfileForm.verifyCode = '';
+};
+
+const getPhoneVerifyCode = async () => {
+  if (!/^1[3-9]\d{9}$/.test(editProfileForm.newPhone)) {
+    ElMessage.warning('请输入有效的手机号');
+    return;
+  }
+  try {
+    const rsp = await sendRequest(
+      '/user/get_phone_verify_code',
+      'huzch.GetPhoneVerifyCodeReq',
+      'huzch.GetPhoneVerifyCodeRsp',
+      { phone_number: editProfileForm.newPhone }
+    );
+    if (rsp.success) {
+      ElMessage.success('验证码已发送');
+      phoneVerifyCodeId.value = rsp.verifyCodeId;
+      phoneCountdown.value = 60;
+      const timer = setInterval(() => {
+        phoneCountdown.value--;
+        if (phoneCountdown.value <= 0) clearInterval(timer);
+      }, 1000);
+    }
+  } catch (e) {
+    ElMessage.error('获取验证码失败');
+  }
+};
+
+const submitBindPhone = async () => {
+  if (!editProfileForm.newPhone || !editProfileForm.verifyCode) {
+    ElMessage.warning('请填写手机号和验证码');
+    return;
+  }
+  try {
+    const rsp = await sendRequest(
+      '/user/set_user_phone_number',
+      'huzch.SetUserPhoneNumberReq',
+      'huzch.SetUserPhoneNumberRsp',
+      {
+        userId: currentUserId.value,
+        phoneNumber: editProfileForm.newPhone,
+        phoneVerifyCodeId: phoneVerifyCodeId.value,
+        phoneVerifyCode: editProfileForm.verifyCode,
+        loginSessionId: props.currentUser.sessionId
+      }
+    );
+    if (rsp.success) {
+      ElMessage.success('手机号修改成功');
+      isBindingPhone.value = false;
+      await showProfile(); // 刷新
+    } else {
+      ElMessage.error(rsp.errmsg || '修改失败');
+    }
+  } catch (e) {
+    ElMessage.error('修改手机号失败');
+  }
 };
 
 const handleAvatarChange = (file) => {
@@ -1911,5 +2009,13 @@ textarea {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
+}
+
+.phone-bind-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #dcdfe6;
 }
 </style>
