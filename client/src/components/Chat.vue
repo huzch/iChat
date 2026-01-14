@@ -578,6 +578,39 @@ const sendMessage = async () => {
   const content = inputMessage.value;
   inputMessage.value = ''; // Clear input immediately
 
+  // Optimistic UI update: push message locally before server response
+  const optimisticMsg = {
+    messageId: 'temp-' + Date.now(),
+    chatSessionId: currentSession.value.chatSessionId,
+    timestamp: Math.floor(Date.now() / 1000),
+    sender: {
+      userId: props.currentUser.userId,
+      name: userProfile.value.name || props.currentUser.username,
+      avatar: props.currentUser.avatarUrl ? props.currentUser.avatarUrl.replace('data:image/png;base64,', '') : null
+    },
+    message: {
+      messageType: 0,
+      stringMessage: {
+        content: content
+      }
+    }
+  };
+
+  messages.value.push(optimisticMsg);
+
+  // Update session list preview immediately
+  const session = sessions.value.find(s => s.chatSessionId === currentSession.value.chatSessionId);
+  if (session) {
+    session.prevMessage = optimisticMsg;
+    // Move to top
+    const index = sessions.value.indexOf(session);
+    if (index > 0) {
+      sessions.value.splice(index, 1);
+      sessions.value.unshift(session);
+    }
+  }
+  scrollToBottom();
+
   try {
     const rsp = await sendRequest(
       '/forward/new_message',
@@ -596,30 +629,15 @@ const sendMessage = async () => {
       }
     );
 
-    if (rsp.success) {
-      // Optimistically append message or wait for WS?
-      // Usually wait for WS or response.
-      // The response contains message_info.
-      if (rsp.messageInfo) {
-        // Update session list preview
-        const session = sessions.value.find(s => s.chatSessionId === currentSession.value.chatSessionId);
-        if (session) {
-          session.prevMessage = rsp.messageInfo;
-          // Move to top
-          const index = sessions.value.indexOf(session);
-          if (index > 0) {
-            sessions.value.splice(index, 1);
-            sessions.value.unshift(session);
-          }
-        }
-        messages.value.push(rsp.messageInfo);
-        scrollToBottom();
-      }
-    } else {
+    if (!rsp.success) {
+      // Remove the optimistic message if sending failed
+      messages.value = messages.value.filter(m => m.messageId !== optimisticMsg.messageId);
       ElMessage.error(rsp.errmsg || 'Failed to send');
     }
   } catch (e) {
     console.error("Send error", e);
+    // Remove the optimistic message on network error
+    messages.value = messages.value.filter(m => m.messageId !== optimisticMsg.messageId);
     ElMessage.error('Send failed');
   }
 };
