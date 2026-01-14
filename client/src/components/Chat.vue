@@ -1,6 +1,6 @@
 <template>
   <div class="chat-container">
-    <!-- Left Sidebar: Navigation -->
+    <!-- 左侧侧边栏：导航 -->
     <div class="nav-sidebar">
       <div class="avatar-wrapper" @click="showProfile" style="cursor: pointer;">
         <el-avatar :size="40" :src="currentUser.avatarUrl || defaultAvatar" />
@@ -25,20 +25,17 @@
       </div>
     </div>
 
-    <!-- Middle Sidebar: Session List, Friends, or Friend Requests -->
+    <!-- 中间侧边栏：会话列表、好友或申请 -->
     <div class="list-sidebar">
       <div v-if="activeTab === 'chat'">
         <div class="search-bar">
-          <el-input v-model="searchText" placeholder="Search" prefix-icon="Search" size="small" style="flex: 1; margin-right: 5px;" />
+          <el-input v-model="searchText" placeholder="搜索" prefix-icon="Search" size="small" style="flex: 1; margin-right: 5px;" />
           <el-dropdown trigger="click">
             <el-button circle size="small" :icon="Plus" />
-            <template #footer>
-              <!-- This part is for el-dropdown menu -->
-            </template>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item :icon="User" @click="showAddFriend">Add Friend</el-dropdown-item>
-                <el-dropdown-item :icon="CirclePlus" @click="showCreateGroup">Create Group</el-dropdown-item>
+                <el-dropdown-item :icon="User" @click="showAddFriend">添加好友</el-dropdown-item>
+                <el-dropdown-item :icon="CirclePlus" @click="showCreateGroup">创建群聊</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -53,7 +50,7 @@
           >
             <el-avatar :size="40" shape="square" :src="session.avatar ? 'data:image/png;base64,' + session.avatar : defaultAvatar" />
             <div class="session-info">
-              <div class="session-name">{{ session.chatSessionName || 'Unknown' }}</div>
+              <div class="session-name">{{ session.chatSessionName || '未知' }}</div>
               <div class="session-preview">{{ getLastMessagePreview(session) }}</div>
             </div>
           </div>
@@ -62,7 +59,7 @@
 
       <div v-else-if="activeTab === 'friends'" class="friends-view">
         <div class="sidebar-header">
-          <h3>Friends</h3>
+          <h3>好友列表</h3>
         </div>
         <div class="friends-list">
           <div 
@@ -76,13 +73,13 @@
               <div class="friend-name">{{ friend.name }}</div>
             </div>
           </div>
-          <el-empty v-if="friends.length === 0" description="No friends" :image-size="60" />
+          <el-empty v-if="friends.length === 0" description="暂无好友" :image-size="60" />
         </div>
       </div>
 
       <div v-else-if="activeTab === 'requests'" class="requests-view">
         <div class="sidebar-header">
-          <h3>Friend Requests</h3>
+          <h3>好友申请</h3>
         </div>
         <div class="requests-list">
           <div v-for="req in friendRequests" :key="req.userId" class="request-item">
@@ -95,12 +92,12 @@
               </div>
             </div>
           </div>
-          <el-empty v-if="friendRequests.length === 0" description="No requests" :image-size="60" />
+          <el-empty v-if="friendRequests.length === 0" description="暂无申请" :image-size="60" />
         </div>
       </div>
     </div>
 
-    <!-- Right Area: Chat Window -->
+    <!-- 右侧：聊天窗口 -->
     <div class="chat-window" v-if="currentSession">
       <div class="chat-header">
         <h3>{{ currentSession.chatSessionName }}</h3>
@@ -131,20 +128,20 @@
         <textarea 
           v-model="inputMessage" 
           @keydown.enter.prevent="sendMessage"
-          placeholder="Type a message..."
+          placeholder="请输入消息..."
         ></textarea>
         <div class="send-btn-wrapper">
-          <el-button type="success" size="small" @click="sendMessage" :disabled="!inputMessage.trim()">Send</el-button>
+          <el-button type="success" size="small" @click="sendMessage" :disabled="!inputMessage.trim()">发送</el-button>
         </div>
       </div>
     </div>
     
     <div class="empty-state" v-else>
-      <el-empty description="Select a chat to start messaging" />
+      <el-empty description="请选择一个聊天开始沟通" />
     </div>
 
-    <!-- Profile Dialog -->
-    <el-dialog v-model="profileVisible" title="My Profile" width="350px" center @close="resetProfileMode">
+    <!-- 个人资料对话框 -->
+    <el-dialog v-model="profileVisible" title="个人资料" width="350px" center @close="resetProfileMode">
       <div class="profile-content">
         <div class="avatar-section">
           <el-upload
@@ -157,7 +154,7 @@
           >
             <div class="avatar-edit-overlay">
               <el-avatar :size="80" :src="editProfileForm.avatarUrl || defaultAvatar" />
-              <div class="overlay-text">Change</div>
+              <div class="overlay-text">更换头像</div>
             </div>
           </el-upload>
           <el-avatar v-else :size="80" :src="userProfile.avatar ? 'data:image/png;base64,' + userProfile.avatar : defaultAvatar" />
@@ -166,34 +163,34 @@
         <div v-if="!isEditingProfile" class="profile-info-view">
           <h3>{{ userProfile.name }}</h3>
           <p class="info-item"><span class="label">ID:</span> {{ userProfile.userId }}</p>
-          <p class="info-item"><span class="label">Phone:</span> {{ userProfile.phone || 'Not set' }}</p>
-          <p class="info-item"><span class="label">Desc:</span> {{ userProfile.description || 'No description' }}</p>
-          <el-button type="primary" :icon="Edit" @click="startEditProfile" style="margin-top: 20px; width: 100%;">Edit Profile</el-button>
+          <p class="info-item"><span class="label">手机号:</span> {{ userProfile.phone || '未绑定' }}</p>
+          <p class="info-item"><span class="label">简介:</span> {{ userProfile.description || '暂无简介' }}</p>
+          <el-button type="primary" :icon="Edit" @click="startEditProfile" style="margin-top: 20px; width: 100%;">编辑资料</el-button>
         </div>
 
         <div v-else class="profile-info-edit">
           <el-form :model="editProfileForm" label-width="60px">
-            <el-form-item label="Name">
+            <el-form-item label="昵称">
               <el-input v-model="editProfileForm.name" />
             </el-form-item>
-            <el-form-item label="Desc">
+            <el-form-item label="简介">
               <el-input v-model="editProfileForm.description" type="textarea" :rows="2" />
             </el-form-item>
           </el-form>
           <div class="edit-actions">
-            <el-button @click="cancelEditProfile">Cancel</el-button>
-            <el-button type="primary" @click="saveProfile" :loading="savingProfile">Save</el-button>
+            <el-button @click="cancelEditProfile">取消</el-button>
+            <el-button type="primary" @click="saveProfile" :loading="savingProfile">保存</el-button>
           </div>
         </div>
       </div>
     </el-dialog>
 
-    <!-- Add Friend Dialog -->
-    <el-dialog v-model="addFriendVisible" title="Add Friend" width="400px">
+    <!-- 添加好友对话框 -->
+    <el-dialog v-model="addFriendVisible" title="添加好友" width="400px">
       <div class="add-friend-content">
         <el-input 
           v-model="searchUserKey" 
-          placeholder="Search by username or phone" 
+          placeholder="搜用户名或手机号" 
           class="input-with-select"
           @keyup.enter="searchUser"
         >
@@ -209,22 +206,22 @@
               <div class="name">{{ user.name }}</div>
               <div class="id">ID: {{ user.userId }}</div>
             </div>
-            <el-button type="primary" size="small" @click="addFriend(user)">Add</el-button>
+            <el-button type="primary" size="small" @click="addFriend(user)">添加</el-button>
           </div>
         </div>
         <div v-else-if="searchPerformed" class="no-results">
-          No users found.
+          未找到相关用户
         </div>
       </div>
     </el-dialog>
 
-    <!-- Create Group Dialog -->
-    <el-dialog v-model="createGroupVisible" title="Create Group Chat" width="450px" destroy-on-close>
+    <!-- 创建群聊对话框 -->
+    <el-dialog v-model="createGroupVisible" title="发起群聊" width="450px" destroy-on-close>
       <el-form :model="createGroupForm" label-width="100px">
-        <el-form-item label="Group Name" required>
-          <el-input v-model="createGroupForm.name" placeholder="Enter group name" />
+        <el-form-item label="群聊名称" required>
+          <el-input v-model="createGroupForm.name" placeholder="请输入群聊名称" />
         </el-form-item>
-        <el-form-item label="Members" required>
+        <el-form-item label="选择成员" required>
           <div class="member-selector">
             <el-checkbox-group v-model="createGroupForm.selectedMembers">
               <div v-for="friend in friends" :key="friend.userId" class="member-option">
@@ -236,15 +233,15 @@
                 </el-checkbox>
               </div>
             </el-checkbox-group>
-            <el-empty v-if="friends.length === 0" description="No friends to add" :image-size="40" />
+            <el-empty v-if="friends.length === 0" description="暂无可选好友" :image-size="40" />
           </div>
         </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="createGroupVisible = false">Cancel</el-button>
+          <el-button @click="createGroupVisible = false">取消</el-button>
           <el-button type="primary" @click="createGroup" :loading="creatingGroup" :disabled="!createGroupForm.name || createGroupForm.selectedMembers.length === 0">
-            Create
+            创建
           </el-button>
         </div>
       </template>
@@ -279,6 +276,8 @@ const inputMessage = ref('');
 const messageListRef = ref(null);
 let wsClient = null;
 
+// 个人资料显隐
+const profileVisible = ref(false);
 const userProfile = ref({});
 const currentUserId = computed(() => userProfile.value?.userId || props.currentUser.userId);
 const isEditingProfile = ref(false);
@@ -290,6 +289,7 @@ const editProfileForm = reactive({
   avatarFile: null
 });
 
+// 获取用户详细信息
 const fetchUserProfile = async () => {
   try {
     const rsp = await sendRequest(
@@ -297,19 +297,20 @@ const fetchUserProfile = async () => {
       'huzch.GetUserInfoReq',
       'huzch.GetUserInfoRsp',
       {
-        userId: currentUserId.value, // Use original ID from props for the lookup
+        userId: currentUserId.value, // 使用原始 ID 查找
         loginSessionId: props.currentUser.sessionId
       }
     );
     if (rsp.success && rsp.userInfo) {
       userProfile.value = rsp.userInfo;
-      console.log("Global userId established:", userProfile.value.userId);
+      console.log("真实 userId 已确立:", userProfile.value.userId);
     }
   } catch (e) {
-    console.error("Failed to establish global userId", e);
+    console.error("确立真实 userId 失败", e);
   }
 };
 
+// 显示个人资料
 const showProfile = async () => {
   profileVisible.value = true;
   isEditingProfile.value = false;
@@ -320,6 +321,7 @@ const resetProfileMode = () => {
   isEditingProfile.value = false;
 };
 
+// 开始编辑资料
 const startEditProfile = () => {
   editProfileForm.name = userProfile.value.name;
   editProfileForm.description = userProfile.value.description;
@@ -624,17 +626,15 @@ const processRequest = async (req, agree) => {
   }
 };
 
-// Fetch sessions on mount
+// 挂载时获取会话
 onMounted(async () => {
-  await fetchUserProfile(); // Establish the real UUID first
+  await fetchUserProfile(); // 先确立真实 UUID
   await fetchSessions();
   initWebSocket();
 });
 
 const initWebSocket = () => {
-  // Assuming WS port is 9001 based on gateway_server.cc
-  // In dev, we might need to proxy this too or connect directly if CORS allows.
-  // Since vite proxy only proxies HTTP, we connect directly to 9001.
+  // 建立 WebSocket 连接
   const wsUrl = `ws://${window.location.hostname}:9001`;
   wsClient = new WebSocketClient(wsUrl, props.currentUser.sessionId, handleWsMessage);
   wsClient.connect();
@@ -651,39 +651,39 @@ const handleWsMessage = async (data) => {
       defaults: true
     });
 
-    console.log("Received Notify:", notify);
+    console.log("收到通知:", notify);
 
     if (notify.notifyType === 'FRIEND_ADD_SEND_NOTIFY' || notify.notifyType === 0) {
-      ElMessage.info('You have a new friend request');
+      ElMessage.info('收到新的好友申请');
       if (activeTab.value === 'requests') {
         await fetchFriendRequests();
       }
     } else if (notify.notifyType === 'FRIEND_ADD_PROCESS_NOTIFY' || notify.notifyType === 1) {
       const info = notify.friendAddProcess;
       if (info && info.agree) {
-        ElMessage.success(`${info.userInfo.name} accepted your friend request`);
+        ElMessage.success(`${info.userInfo.name} 通过了你的好友申请`);
         await fetchSessions();
         if (activeTab.value === 'friends') {
           await fetchFriends();
         }
       } else {
-        ElMessage.warning(`${info.userInfo.name} rejected your friend request`);
+        ElMessage.warning(`${info.userInfo.name} 拒绝了你的好友申请`);
       }
     } else if (notify.notifyType === 'FRIEND_REMOVE_NOTIFY' || notify.notifyType === 2) {
-      ElMessage.info('A friend was removed');
+      ElMessage.info('好友已被移除');
       await fetchSessions();
     } else if (notify.notifyType === 'CHAT_SESSION_CREATE_NOTIFY' || notify.notifyType === 3) {
-      // New chat session created (e.g. after friend request accepted)
+      // 新会话创建通知（例如好友申请通过后）
       await fetchSessions();
     } else if (notify.notifyType === 'CHAT_MESSAGE_NOTIFY' || notify.notifyType === 4 ) {
       const msgInfo = notify.newMessageInfo ? notify.newMessageInfo.messageInfo : null;
       if (!msgInfo) return;
 
-      // Update session list preview
+      // 更新会话列表预览
       const session = sessions.value.find(s => s.chatSessionId === msgInfo.chatSessionId);
       if (session) {
         session.prevMessage = msgInfo;
-        // Move session to top
+        // 将会话移至顶部
         const index = sessions.value.indexOf(session);
         if (index > 0) {
           sessions.value.splice(index, 1);
@@ -691,9 +691,9 @@ const handleWsMessage = async (data) => {
         }
       }
 
-      // If it's the current session, add to message list
+      // 如果是当前打开的会话，添加到消息列表
       if (currentSession.value && currentSession.value.chatSessionId === msgInfo.chatSessionId) {
-        // Check if message already exists (to avoid duplicate from sendMessage)
+        // 检查消息是否已存在（避免 sendMessage 后的重复）
         if (!messages.value.find(m => m.messageId === msgInfo.messageId)) {
           messages.value.push(msgInfo);
           scrollToBottom();
@@ -701,7 +701,7 @@ const handleWsMessage = async (data) => {
       }
     }
   } catch (e) {
-    console.error("Failed to handle WS message", e);
+    console.error("处理 WS 消息失败", e);
   }
 };
 
@@ -756,9 +756,9 @@ const sendMessage = async () => {
   if (!inputMessage.value.trim() || !currentSession.value) return;
 
   const content = inputMessage.value;
-  inputMessage.value = ''; // Clear input immediately
+  inputMessage.value = ''; // 立即清空输入框
 
-  // Optimistic UI update: push message locally before server response
+  // 乐观 UI 更新：在服务器响应前先将消息推送到本地列表
   const optimisticMsg = {
     messageId: 'temp-' + Date.now(),
     chatSessionId: currentSession.value.chatSessionId,
@@ -778,11 +778,11 @@ const sendMessage = async () => {
 
   messages.value.push(optimisticMsg);
 
-  // Update session list preview immediately
+  // 立即更新侧边栏预览
   const session = sessions.value.find(s => s.chatSessionId === currentSession.value.chatSessionId);
   if (session) {
     session.prevMessage = optimisticMsg;
-    // Move to top
+    // 移至顶部
     const index = sessions.value.indexOf(session);
     if (index > 0) {
       sessions.value.splice(index, 1);
@@ -810,15 +810,15 @@ const sendMessage = async () => {
     );
 
     if (!rsp.success) {
-      // Remove the optimistic message if sending failed
+      // 发送失败则移除乐观 UI 消息
       messages.value = messages.value.filter(m => m.messageId !== optimisticMsg.messageId);
-      ElMessage.error(rsp.errmsg || 'Failed to send');
+      ElMessage.error(rsp.errmsg || '发送失败');
     }
   } catch (e) {
-    console.error("Send error", e);
-    // Remove the optimistic message on network error
+    console.error("发送错误", e);
+    // 网络错误也移除消息
     messages.value = messages.value.filter(m => m.messageId !== optimisticMsg.messageId);
-    ElMessage.error('Send failed');
+    ElMessage.error('网络错误，发送失败');
   }
 };
 
@@ -834,16 +834,16 @@ const getLastMessagePreview = (session) => {
   if (!session.prevMessage) return '';
   const msg = session.prevMessage.message;
   if (msg.stringMessage) return msg.stringMessage.content;
-  if (msg.imageMessage) return '[Image]';
-  if (msg.fileMessage) return '[File]';
-  if (msg.speechMessage) return '[Voice]';
+  if (msg.imageMessage) return '[图片]';
+  if (msg.fileMessage) return '[文件]';
+  if (msg.speechMessage) return '[语音]';
   return '';
 };
 
 const getMessageContent = (msg) => {
   if (!msg.message) return '';
   if (msg.message.stringMessage) return msg.message.stringMessage.content;
-  return '[Unsupported Message Type]';
+  return '[暂不支持的消息类型]';
 };
 
 const getSenderAvatar = (msg) => {

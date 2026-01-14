@@ -1,25 +1,25 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h2>{{ isRegister ? 'iChat Register' : 'iChat Login' }}</h2>
+      <h2>{{ isRegister ? 'iChat 注册' : 'iChat 登录' }}</h2>
       <el-form :model="form" label-width="0">
         <el-form-item>
-          <el-input v-model="form.username" placeholder="Username" prefix-icon="User" />
+          <el-input v-model="form.username" placeholder="用户名" prefix-icon="User" />
         </el-form-item>
         <el-form-item>
-          <el-input v-model="form.password" type="password" placeholder="Password" prefix-icon="Lock" show-password />
+          <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Lock" show-password />
         </el-form-item>
         <el-form-item v-if="isRegister">
-          <el-input v-model="form.confirmPassword" type="password" placeholder="Confirm Password" prefix-icon="Lock" show-password />
+          <el-input v-model="form.confirmPassword" type="password" placeholder="确认密码" prefix-icon="Lock" show-password />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" class="login-btn" :loading="loading" @click="handleSubmit">
-            {{ isRegister ? 'Register' : 'Log In' }}
+            {{ isRegister ? '立即注册' : '登录' }}
           </el-button>
         </el-form-item>
         <div class="toggle-mode">
           <el-link type="primary" @click="toggleMode">
-            {{ isRegister ? 'Already have an account? Log In' : 'No account? Register now' }}
+            {{ isRegister ? '已有账号？去登录' : '没有账号？立即注册' }}
           </el-link>
         </div>
       </el-form>
@@ -114,9 +114,9 @@ const handleLogin = async () => {
     );
 
     if (rsp.success) {
-      // Login successful, now we need to fetch the real user_id
-      // Because UserLogin only returns session_id, but other APIs need user_id (UUID)
-      // We use UserSearch to find our own user_id by username
+      // 登录成功，获取真实的 user_id
+      // 因为 UserLogin 仅返回 session_id，其他接口需要 UUID 格式的 user_id
+      // 通过 UserSearch 根据用户名搜索获取自己的 user_id
       try {
         const searchRsp = await sendRequest(
           '/user/user_search',
@@ -131,21 +131,21 @@ const handleLogin = async () => {
         if (searchRsp.success && searchRsp.usersInfo) {
           const me = searchRsp.usersInfo.find(u => u.name === form.username);
           if (me) {
-            ElMessage.success('Login successful');
+            ElMessage.success('登录成功');
             emit('login-success', {
               username: me.name,
-              userId: me.userId, // The real UUID
+              userId: me.userId, // 真实的 UUID
               sessionId: rsp.loginSessionId,
               avatar: me.avatar
             });
             return;
           }
         }
-        throw new Error("Failed to retrieve user info");
+        throw new Error("获取用户信息失败");
       } catch (e) {
-        console.error("Failed to fetch user details", e);
-        ElMessage.warning('Login successful but failed to load user profile. Some features may not work.');
-        // Fallback: use username as userId (might fail for some APIs)
+        console.error("获取用户信息失败", e);
+        ElMessage.warning('登录成功但加载详细资料失败，部分功能可能受限');
+        // 兜底方案：使用用户名作为 userId（部分 API 可能失败）
         emit('login-success', {
           username: form.username,
           userId: form.username, 
@@ -153,10 +153,10 @@ const handleLogin = async () => {
         });
       }
     } else {
-      ElMessage.error(rsp.errmsg || 'Login failed');
+      ElMessage.error(rsp.errmsg || '登录失败');
     }
   } catch (error) {
-    ElMessage.error('Network error or server unavailable');
+    ElMessage.error('网络错误或服务器不可用');
   } finally {
     loading.value = false;
   }

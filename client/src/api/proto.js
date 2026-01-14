@@ -1,6 +1,6 @@
 import protobuf from 'protobufjs';
 
-// Cache the root object
+// 缓存 root 对象
 let root = null;
 
 export const loadProto = async () => {

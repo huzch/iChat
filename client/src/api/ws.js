@@ -20,24 +20,19 @@ export class WebSocketClient {
     };
 
     this.ws.onmessage = async (event) => {
-      // Handle incoming messages
-      // We need to know the message type. 
-      // Usually, the backend sends a specific proto.
-      // Based on gateway.proto, it might be just forwarding messages.
-      // Let's assume it sends 'huzch.NotifyMessage' or similar.
-      // I need to check notify.proto.
+      // 处理接收到的消息
       if (this.onMessage) {
         this.onMessage(event.data);
       }
     };
 
     this.ws.onclose = () => {
-      console.log('WebSocket disconnected');
+      console.log('WebSocket 连接断开');
       this.isConnected = false;
     };
 
     this.ws.onerror = (error) => {
-      console.error('WebSocket error', error);
+      console.error('WebSocket 错误', error);
     };
   }
 
@@ -48,7 +43,7 @@ export class WebSocketClient {
       loginSessionId: this.sessionId
     };
     const buffer = AuthReq.encode(AuthReq.create(payload)).finish();
-    // Send as Blob to ensure binary transmission
+    // 以 Blob 形式发送确保二进制传输
     this.ws.send(new Blob([buffer]));
   }
 
