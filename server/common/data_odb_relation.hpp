@@ -52,8 +52,9 @@ class RelationTable {
       auto result = _odb_client->query<Relation>(
           odb::query<Relation>::user_id == user_id &&
           odb::query<Relation>::peer_id == peer_id);
+      bool ret = !result.empty();
       t.commit();
-      return !result.empty();
+      return ret;
     } catch (const std::exception& e) {
       LOG_ERROR("好友关系 {}-{} 查询失败: {}", user_id, peer_id, e.what());
       return false;

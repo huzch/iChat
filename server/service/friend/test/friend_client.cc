@@ -22,19 +22,19 @@ bool agree;
 std::string chat_session_name;
 std::vector<std::string> users_id;
 
-// TEST(request_test, send_request) {
-//   huzch::FriendService_Stub stub(channel.get());
-//   brpc::Controller ctrl;
-//   huzch::FriendAddSendReq req;
-//   req.set_request_id(huzch::uuid());
-//   req.set_user_id(user_id);
-//   req.set_respondent_id(peer_id);
-//   huzch::FriendAddSendRsp rsp;
+TEST(request_test, send_request) {
+  huzch::FriendService_Stub stub(channel.get());
+  brpc::Controller ctrl;
+  huzch::FriendAddSendReq req;
+  req.set_request_id(huzch::uuid());
+  req.set_user_id(user_id);
+  req.set_respondent_id(peer_id);
+  huzch::FriendAddSendRsp rsp;
 
-//   stub.FriendAddSend(&ctrl, &req, &rsp, nullptr);
-//   ASSERT_FALSE(ctrl.Failed());
-//   ASSERT_TRUE(rsp.success());
-// }
+  stub.FriendAddSend(&ctrl, &req, &rsp, nullptr);
+  ASSERT_FALSE(ctrl.Failed());
+  ASSERT_TRUE(rsp.success());
+}
 
 // TEST(get_test, get_request) {
 //   huzch::FriendService_Stub stub(channel.get());
@@ -152,37 +152,37 @@ std::vector<std::string> users_id;
 //   }
 // }
 
-TEST(get_test, get_session) {
-  huzch::FriendService_Stub stub(channel.get());
-  brpc::Controller ctrl;
-  huzch::GetChatSessionReq req;
-  req.set_request_id(huzch::uuid());
-  req.set_user_id(user_id);
-  huzch::GetChatSessionRsp rsp;
+// TEST(get_test, get_session) {
+//   huzch::FriendService_Stub stub(channel.get());
+//   brpc::Controller ctrl;
+//   huzch::GetChatSessionReq req;
+//   req.set_request_id(huzch::uuid());
+//   req.set_user_id(user_id);
+//   huzch::GetChatSessionRsp rsp;
 
-  stub.GetChatSession(&ctrl, &req, &rsp, nullptr);
-  ASSERT_FALSE(ctrl.Failed());
-  ASSERT_TRUE(rsp.success());
+//   stub.GetChatSession(&ctrl, &req, &rsp, nullptr);
+//   ASSERT_FALSE(ctrl.Failed());
+//   ASSERT_TRUE(rsp.success());
 
-  for (auto& chat_session_info : rsp.chat_sessions_info()) {
-    std::cout << chat_session_info.single_chat_friend_id() << std::endl;
-    std::cout << chat_session_info.chat_session_id() << std::endl;
-    std::cout << chat_session_info.chat_session_name() << std::endl;
-    std::cout << chat_session_info.avatar() << std::endl;
+//   for (auto& chat_session_info : rsp.chat_sessions_info()) {
+//     std::cout << chat_session_info.single_chat_friend_id() << std::endl;
+//     std::cout << chat_session_info.chat_session_id() << std::endl;
+//     std::cout << chat_session_info.chat_session_name() << std::endl;
+//     std::cout << chat_session_info.avatar() << std::endl;
 
-    auto message_info = chat_session_info.prev_message();
-    std::cout << message_info.message_id() << std::endl;
-    std::cout << message_info.chat_session_id() << std::endl;
-    std::cout << message_info.timestamp() << std::endl;
-    std::cout << message_info.sender().user_id() << std::endl;
-    std::cout << message_info.sender().name() << std::endl;
-    std::cout << message_info.sender().avatar() << std::endl;
-    std::cout << message_info.message().message_type() << std::endl;
-    std::cout << message_info.message().file_message().file_name() << std::endl;
-    std::cout << message_info.message().file_message().file_content()
-              << std::endl;
-  }
-}
+//     auto message_info = chat_session_info.prev_message();
+//     std::cout << message_info.message_id() << std::endl;
+//     std::cout << message_info.chat_session_id() << std::endl;
+//     std::cout << message_info.timestamp() << std::endl;
+//     std::cout << message_info.sender().user_id() << std::endl;
+//     std::cout << message_info.sender().name() << std::endl;
+//     std::cout << message_info.sender().avatar() << std::endl;
+//     std::cout << message_info.message().message_type() << std::endl;
+//     std::cout << message_info.message().file_message().file_name() << std::endl;
+//     std::cout << message_info.message().file_message().file_content()
+//               << std::endl;
+//   }
+// }
 
 int main(int argc, char* argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
@@ -209,8 +209,8 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  user_id = "1fe9a0b8d11a0000";
-  peer_id = "7b45ffc75e7b0001";
+  user_id = "286c6679b51b0000";
+  peer_id = "51fd41e631c30002";
   chat_session_id = "7d84333082220002";
   agree = true;
   users_id = {"1fe9a0b8d11a0000", "cb40be03c9f00000", "7b45ffc75e7b0001"};

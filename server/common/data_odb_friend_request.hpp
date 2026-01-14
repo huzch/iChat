@@ -47,8 +47,9 @@ class FriendRequestTable {
       auto result = _odb_client->query<FriendRequest>(
           odb::query<FriendRequest>::user_id == user_id &&
           odb::query<FriendRequest>::peer_id == peer_id);
+      bool ret = !result.empty();
       t.commit();
-      return !result.empty();
+      return ret;
     } catch (const std::exception& e) {
       LOG_ERROR("好友申请 {}-{} 查询失败: {}", user_id, peer_id, e.what());
       return false;

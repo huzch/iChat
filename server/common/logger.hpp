@@ -15,8 +15,8 @@ void init_logger(bool mode, const std::string& file, int level) {
     g_default_logger->flush_on(spdlog::level::level_enum::trace);
   } else {  // 发布模式
     g_default_logger = spdlog::basic_logger_mt("default_logger", file);
-    g_default_logger->set_level((spdlog::level::level_enum)level);
-    g_default_logger->flush_on((spdlog::level::level_enum)level);
+    g_default_logger->set_level(static_cast<spdlog::level::level_enum>(level));
+    g_default_logger->flush_on(static_cast<spdlog::level::level_enum>(level));
   }
   // [日志器][时:分:秒][线程][日志等级]日志内容
   g_default_logger->set_pattern("[%n][%H:%M:%S][%t][%l]%v");
