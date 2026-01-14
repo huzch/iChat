@@ -27,22 +27,23 @@
 
     <!-- 中间侧边栏：会话列表、好友或申请 -->
     <div class="list-sidebar">
-      <div v-if="activeTab === 'chat'">
-        <div class="search-bar">
-          <el-input v-model="searchText" placeholder="搜索" prefix-icon="Search" size="small" style="flex: 1; margin-right: 5px;" />
-          <el-dropdown trigger="click">
-            <el-button circle size="small" :icon="Plus" />
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item :icon="User" @click="showAddFriend">添加好友</el-dropdown-item>
-                <el-dropdown-item :icon="CirclePlus" @click="showCreateGroup">创建群聊</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
+      <div class="search-bar">
+        <el-input v-model="searchText" placeholder="搜索" prefix-icon="Search" size="small" style="flex: 1; margin-right: 5px;" />
+        <el-dropdown trigger="click">
+          <el-button circle size="small" :icon="Plus" />
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :icon="User" @click="showAddFriend">添加好友</el-dropdown-item>
+              <el-dropdown-item :icon="CirclePlus" @click="showCreateGroup">创建群聊</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+
+      <div v-if="activeTab === 'chat'" class="sessions-view">
         <div class="session-list">
           <div 
-            v-for="session in sessions" 
+            v-for="session in filteredSessions" 
             :key="session.chatSessionId" 
             class="session-item"
             :class="{ active: currentSession?.chatSessionId === session.chatSessionId }"
@@ -54,16 +55,14 @@
               <div class="session-preview">{{ getLastMessagePreview(session) }}</div>
             </div>
           </div>
+          <el-empty v-if="filteredSessions.length === 0" description="暂无会话" :image-size="60" />
         </div>
       </div>
 
       <div v-else-if="activeTab === 'friends'" class="friends-view">
-        <div class="sidebar-header">
-          <h3>好友列表</h3>
-        </div>
         <div class="friends-list">
           <div 
-            v-for="friend in friends" 
+            v-for="friend in filteredFriends" 
             :key="friend.userId" 
             class="friend-item"
             @click="startChat(friend)"
@@ -73,16 +72,13 @@
               <div class="friend-name">{{ friend.name }}</div>
             </div>
           </div>
-          <el-empty v-if="friends.length === 0" description="暂无好友" :image-size="60" />
+          <el-empty v-if="filteredFriends.length === 0" description="暂无好友" :image-size="60" />
         </div>
       </div>
 
       <div v-else-if="activeTab === 'requests'" class="requests-view">
-        <div class="sidebar-header">
-          <h3>好友申请</h3>
-        </div>
         <div class="requests-list">
-          <div v-for="req in friendRequests" :key="req.userId" class="request-item">
+          <div v-for="req in filteredRequests" :key="req.userId" class="request-item">
             <el-avatar :size="40" shape="square" :src="req.avatar ? 'data:image/png;base64,' + req.avatar : defaultAvatar" />
             <div class="request-info">
               <div class="request-name">{{ req.name }}</div>
@@ -92,7 +88,7 @@
               </div>
             </div>
           </div>
-          <el-empty v-if="friendRequests.length === 0" description="暂无申请" :image-size="60" />
+          <el-empty v-if="filteredRequests.length === 0" description="暂无申请" :image-size="60" />
         </div>
       </div>
     </div>
@@ -320,8 +316,34 @@ const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726
 const activeTab = ref('chat');
 const searchText = ref('');
 const sessions = ref([]);
+const filteredSessions = computed(() => {
+  if (!searchText.value) return sessions.value;
+  const keyword = searchText.value.toLowerCase();
+  return sessions.value.filter(s => 
+    (s.chatSessionName || '').toLowerCase().includes(keyword)
+  );
+});
+
 const friends = ref([]);
+const filteredFriends = computed(() => {
+  if (!searchText.value) return friends.value;
+  const keyword = searchText.value.toLowerCase();
+  return friends.value.filter(f => 
+    (f.name || '').toLowerCase().includes(keyword) || 
+    (f.phone || '').toLowerCase().includes(keyword)
+  );
+});
+
 const friendRequests = ref([]);
+const filteredRequests = computed(() => {
+  if (!searchText.value) return friendRequests.value;
+  const keyword = searchText.value.toLowerCase();
+  return friendRequests.value.filter(r => 
+    (r.name || '').toLowerCase().includes(keyword) || 
+    (r.phone || '').toLowerCase().includes(keyword)
+  );
+});
+
 const currentSession = ref(null);
 const messages = ref([]);
 const inputMessage = ref('');
@@ -1360,10 +1382,11 @@ const getSenderAvatar = (msg) => {
   text-overflow: ellipsis;
 }
 
-.requests-view {
+.sessions-view, .friends-view, .requests-view {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  overflow: hidden;
 }
 
 .friends-list {
@@ -1391,19 +1414,6 @@ const getSenderAvatar = (msg) => {
 
 .friend-name {
   font-weight: 500;
-  color: #000;
-}
-
-.sidebar-header {
-  padding: 15px;
-  background-color: #f7f7f7;
-  border-bottom: 1px solid #d6d6d6;
-}
-
-.sidebar-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
   color: #000;
 }
 
