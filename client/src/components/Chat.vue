@@ -14,13 +14,18 @@
         ><ChatDotRound /></el-icon>
         <el-icon 
           class="nav-icon" 
+          :class="{ active: activeTab === 'friends' }" 
+          @click="showFriends"
+        ><User /></el-icon>
+        <el-icon 
+          class="nav-icon" 
           :class="{ active: activeTab === 'requests' }" 
           @click="showFriendRequests"
-        ><User /></el-icon>
+        ><Bell /></el-icon>
       </div>
     </div>
 
-    <!-- Middle Sidebar: Session List or Friend Requests -->
+    <!-- Middle Sidebar: Session List, Friends, or Friend Requests -->
     <div class="list-sidebar">
       <div v-if="activeTab === 'chat'">
         <div class="search-bar">
@@ -41,6 +46,26 @@
               <div class="session-preview">{{ getLastMessagePreview(session) }}</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div v-else-if="activeTab === 'friends'" class="friends-view">
+        <div class="sidebar-header">
+          <h3>Friends</h3>
+        </div>
+        <div class="friends-list">
+          <div 
+            v-for="friend in friends" 
+            :key="friend.userId" 
+            class="friend-item"
+            @click="startChat(friend)"
+          >
+            <el-avatar :size="40" shape="square" :src="friend.avatar ? 'data:image/png;base64,' + friend.avatar : defaultAvatar" />
+            <div class="friend-info">
+              <div class="friend-name">{{ friend.name }}</div>
+            </div>
+          </div>
+          <el-empty v-if="friends.length === 0" description="No friends" :image-size="60" />
         </div>
       </div>
 
@@ -186,7 +211,7 @@
 
 <script setup>
 import { ref, onMounted, nextTick, watch, reactive } from 'vue';
-import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close } from '@element-plus/icons-vue';
+import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close, Bell } from '@element-plus/icons-vue';
 import { sendRequest } from '../api/client';
 import { getProtoType } from '../api/proto';
 import { WebSocketClient } from '../api/ws';
@@ -203,6 +228,7 @@ const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726
 const activeTab = ref('chat');
 const searchText = ref('');
 const sessions = ref([]);
+const friends = ref([]);
 const friendRequests = ref([]);
 const currentSession = ref(null);
 const messages = ref([]);
@@ -392,6 +418,52 @@ const addFriend = async (user) => {
   }
 };
 
+// Friends Logic
+const showFriends = async () => {
+  activeTab.value = 'friends';
+  await fetchFriends();
+};
+
+const fetchFriends = async () => {
+  try {
+    const rsp = await sendRequest(
+      '/friend/get_friend',
+      'huzch.GetFriendReq',
+      'huzch.GetFriendRsp',
+      {
+        userId: props.currentUser.userId,
+        loginSessionId: props.currentUser.sessionId
+      }
+    );
+    if (rsp.success) {
+      friends.value = rsp.friendsInfo || [];
+    }
+  } catch (e) {
+    console.error("Failed to fetch friends", e);
+  }
+};
+
+const startChat = async (friend) => {
+  // Find session with this friend
+  const session = sessions.value.find(s => s.singleChatFriendId === friend.userId);
+  if (session) {
+    activeTab.value = 'chat';
+    selectSession(session);
+  } else {
+    // If session doesn't exist, we might need to create it, 
+    // but the system creates it on friend acceptance.
+    // If it's missing from 'sessions', maybe we need to refresh sessions.
+    await fetchSessions();
+    const refreshedSession = sessions.value.find(s => s.singleChatFriendId === friend.userId);
+    if (refreshedSession) {
+      activeTab.value = 'chat';
+      selectSession(refreshedSession);
+    } else {
+      ElMessage.warning('Chat session not found');
+    }
+  }
+};
+
 // Friend Requests Logic
 const showFriendRequests = async () => {
   activeTab.value = 'requests';
@@ -436,8 +508,11 @@ const processRequest = async (req, agree) => {
       // Refresh list
       await fetchFriendRequests();
       if (agree) {
-        // If agreed, refresh sessions too as a new chat might be created
+        // If agreed, refresh sessions and friends
         await fetchSessions();
+        if (activeTab.value === 'friends') {
+          await fetchFriends();
+        }
       }
     } else {
       ElMessage.error(rsp.errmsg || 'Failed to process request');
@@ -486,6 +561,9 @@ const handleWsMessage = async (data) => {
       if (info && info.agree) {
         ElMessage.success(`${info.userInfo.name} accepted your friend request`);
         await fetchSessions();
+        if (activeTab.value === 'friends') {
+          await fetchFriends();
+        }
       } else {
         ElMessage.warning(`${info.userInfo.name} rejected your friend request`);
       }
@@ -564,7 +642,7 @@ const fetchMessages = async (sessionId) => {
       }
     );
     if (rsp.success) {
-      messages.value = (rsp.messagesInfo || []).reverse();
+      messages.value = rsp.messagesInfo || [];
       scrollToBottom();
     }
   } catch (e) {
@@ -825,6 +903,33 @@ const getSenderAvatar = (msg) => {
   height: 100%;
 }
 
+.friends-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.friend-item {
+  display: flex;
+  padding: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #dcdcdc;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.friend-item:hover {
+  background-color: #d9d9d9;
+}
+
+.friend-info {
+  margin-left: 10px;
+  flex: 1;
+}
+
+.friend-name {
+  font-weight: 500;
+}
+
 .sidebar-header {
   padding: 15px;
   background-color: #f7f7f7;
@@ -917,7 +1022,8 @@ const getSenderAvatar = (msg) => {
 }
 
 .msg-bubble {
-  background-color: white;
+  background-color: #95ec69;
+  color: #000;
   padding: 10px 14px;
   border-radius: 4px;
   position: relative;
@@ -931,7 +1037,7 @@ const getSenderAvatar = (msg) => {
 .chat-input {
   height: 150px;
   border-top: 1px solid #e7e7e7;
-  background-color: white;
+  background-color: #f5f5f5;
   display: flex;
   flex-direction: column;
 }
@@ -950,6 +1056,8 @@ textarea {
   padding: 0 20px;
   outline: none;
   font-family: inherit;
+  background-color: transparent;
+  color: #000;
 }
 
 .send-btn-wrapper {
