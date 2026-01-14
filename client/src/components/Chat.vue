@@ -103,7 +103,7 @@
         <h3>{{ currentSession.chatSessionName }}</h3>
       </div>
       
-      <div class="message-list" ref="messageListRef">
+      <div class="message-list" ref="messageListRef" @click="closeContextMenu">
         <div 
           v-for="msg in messages" 
           :key="msg.messageId" 
@@ -113,8 +113,37 @@
           <el-avatar :size="36" shape="square" :src="getSenderAvatar(msg)" class="msg-avatar" />
           <div class="msg-content-wrapper">
             <div class="msg-name" v-if="msg.sender.userId !== currentUserId">{{ msg.sender.name }}</div>
-            <div class="msg-bubble">
-              {{ getMessageContent(msg) }}
+            <div class="msg-bubble" @contextmenu.prevent="onContextMenu($event, msg)">
+              <template v-if="msg.message.messageType === 0 || msg.message.messageType === 'STRING'">
+                {{ getMessageContent(msg) }}
+              </template>
+              <template v-else-if="msg.message.messageType === 1 || msg.message.messageType === 'SPEECH'">
+                <div class="voice-msg-wrapper">
+                  <div class="voice-msg" :class="{ 'playing': playingMessageId === msg.messageId }" @click="playVoice(msg)">
+                    <div class="voice-icon-wrapper">
+                      <div class="voice-wave"></div>
+                      <div class="voice-wave delay-1"></div>
+                      <div class="voice-wave delay-2"></div>
+                    </div>
+                    <span class="voice-duration">语音</span>
+                  </div>
+                  <div v-show="msg.recognizedText" class="recognized-text">
+                    {{ msg.recognizedText }}
+                  </div>
+                </div>
+              </template>
+              <template v-else-if="msg.message.messageType === 3 || msg.message.messageType === 'FILE'">
+                <div class="file-msg" @click="downloadFile(msg)">
+                  <el-icon class="file-icon"><Document /></el-icon>
+                  <div class="file-details">
+                    <div class="file-name">{{ msg.message.fileMessage.fileName }}</div>
+                    <div class="file-size">{{ formatFileSize(msg.message.fileMessage.fileSize) }}</div>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                {{ getMessageContent(msg) }}
+              </template>
             </div>
           </div>
         </div>
@@ -122,8 +151,23 @@
 
       <div class="chat-input">
         <div class="toolbar">
-          <el-icon><Folder /></el-icon>
-          <el-icon><Microphone /></el-icon>
+          <input 
+            type="file" 
+            ref="fileInputRef" 
+            style="display: none" 
+            @change="handleFileChange"
+          />
+          <el-icon class="toolbar-icon" @click="triggerFileUpload"><Folder /></el-icon>
+          <el-tooltip content="按住录音" placement="top">
+            <el-icon 
+              class="toolbar-icon" 
+              :class="{ 'recording-active': isRecording }"
+              @mousedown="startRecording"
+              @mouseleave="stopRecording"
+              @mouseup="stopRecording"
+            ><Microphone /></el-icon>
+          </el-tooltip>
+          <span v-if="isRecording" class="recording-tip">正在录音...</span>
         </div>
         <textarea 
           v-model="inputMessage" 
@@ -246,12 +290,20 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 右键菜单 -->
+    <div v-if="contextMenu.show" class="msg-context-menu" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }">
+      <div v-if="contextMenu.msg.message.messageType === 1 || contextMenu.msg.message.messageType === 'SPEECH'" 
+           class="menu-item" @click="handleRecognizeMenu">转文字</div>
+      <div class="menu-item" @click="copyText(contextMenu.msg)">复制文本</div>
+      <div class="menu-item delete" @click="deleteMsg(contextMenu.msg)">删除</div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, nextTick, watch, reactive, computed } from 'vue';
-import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close, Bell, CirclePlus } from '@element-plus/icons-vue';
+import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close, Bell, CirclePlus, Document } from '@element-plus/icons-vue';
 import { sendRequest } from '../api/client';
 import { getProtoType } from '../api/proto';
 import { WebSocketClient } from '../api/ws';
@@ -274,6 +326,7 @@ const currentSession = ref(null);
 const messages = ref([]);
 const inputMessage = ref('');
 const messageListRef = ref(null);
+const fileInputRef = ref(null);
 let wsClient = null;
 
 // 个人资料显隐
@@ -288,6 +341,294 @@ const editProfileForm = reactive({
   avatarUrl: '',
   avatarFile: null
 });
+
+// 文件发送逻辑
+const triggerFileUpload = () => {
+  fileInputRef.value.click();
+};
+
+const handleFileChange = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const arrayBuffer = e.target.result;
+    const uint8Array = new Uint8Array(arrayBuffer);
+    await sendFileMessage(file.name, file.size, uint8Array);
+  };
+  reader.readAsArrayBuffer(file);
+  // 重置 input 以允许再次选择同一文件
+  event.target.value = '';
+};
+
+const sendFileMessage = async (name, size, content) => {
+  if (!currentSession.value) return;
+
+  try {
+    const rsp = await sendRequest(
+      '/forward/new_message',
+      'huzch.NewMessageReq',
+      'huzch.NewMessageRsp',
+      {
+        userId: currentUserId.value,
+        chatSessionId: currentSession.value.chatSessionId,
+        loginSessionId: props.currentUser.sessionId,
+        message: {
+          messageType: 3, // FILE
+          fileMessage: {
+            fileName: name,
+            fileSize: size,
+            fileContent: content
+          }
+        }
+      }
+    );
+    if (rsp.success) {
+      await fetchMessages(currentSession.value.chatSessionId);
+    } else {
+      ElMessage.error(rsp.errmsg || '发送文件失败');
+    }
+  } catch (e) {
+    console.error("发送文件失败", e);
+    ElMessage.error('网络错误');
+  }
+};
+
+const downloadFile = async (msg) => {
+  const fileMsg = msg.message.fileMessage;
+  if (!fileMsg) return;
+
+  let content = fileMsg.fileContent;
+  
+  // 如果消息中不含内容，则需要从文件服务下载
+  if (!content && fileMsg.fileId) {
+    try {
+      const rsp = await sendRequest(
+        '/file/get_single_file',
+        'huzch.GetSingleFileReq',
+        'huzch.GetSingleFileRsp',
+        {
+          fileId: fileMsg.fileId,
+          userId: currentUserId.value,
+          loginSessionId: props.currentUser.sessionId
+        }
+      );
+      if (rsp.success && rsp.fileData) {
+        content = rsp.fileData.fileContent;
+      } else {
+        ElMessage.error('无法下载文件');
+        return;
+      }
+    } catch (e) {
+      console.error("下载文件失败", e);
+      return;
+    }
+  }
+
+  if (!content) return;
+
+  let blob;
+  if (typeof content === 'string') {
+    const binary = atob(content);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      array[i] = binary.charCodeAt(i);
+    }
+    blob = new Blob([array]);
+  } else {
+    blob = new Blob([content]);
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileMsg.fileName || 'download';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+const formatFileSize = (size) => {
+  if (size < 1024) return size + ' B';
+  if (size < 1024 * 1024) return (size / 1024).toFixed(2) + ' KB';
+  return (size / (1024 * 1024)).toFixed(2) + ' MB';
+};
+
+// 录音相关
+const isRecording = ref(false);
+let mediaRecorder = null;
+let audioChunks = [];
+const playingMessageId = ref(null);
+
+// 右键菜单状态
+const contextMenu = reactive({
+  show: false,
+  x: 0,
+  y: 0,
+  msg: null
+});
+
+const onContextMenu = (event, msg) => {
+  contextMenu.show = true;
+  contextMenu.x = event.clientX;
+  contextMenu.y = event.clientY;
+  contextMenu.msg = msg;
+};
+
+const closeContextMenu = () => {
+  contextMenu.show = false;
+};
+
+const handleRecognizeMenu = () => {
+  if (contextMenu.msg) {
+    recognizeSpeech(contextMenu.msg);
+  }
+  closeContextMenu();
+};
+
+const copyText = (msg) => {
+  const text = getMessageContent(msg);
+  navigator.clipboard.writeText(text);
+  ElMessage.success('已复制到剪贴板');
+  closeContextMenu();
+};
+
+const deleteMsg = (msg) => {
+  messages.value = messages.value.filter(m => m.messageId !== msg.messageId);
+  closeContextMenu();
+};
+
+const startRecording = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = (event) => {
+      audioChunks.push(event.data);
+    };
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      await sendVoiceMessage(audioBlob);
+    };
+    mediaRecorder.start();
+    isRecording.value = true;
+  } catch (err) {
+    console.error("麦克风启动失败", err);
+    ElMessage.error("麦克风不可用");
+  }
+};
+
+const stopRecording = () => {
+  if (mediaRecorder && isRecording.value) {
+    mediaRecorder.stop();
+    isRecording.value = false;
+    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+  }
+};
+
+const sendVoiceMessage = async (blob) => {
+  if (!currentSession.value) return;
+  
+  const arrayBuffer = await blob.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+
+  try {
+    const rsp = await sendRequest(
+      '/forward/new_message',
+      'huzch.NewMessageReq',
+      'huzch.NewMessageRsp',
+      {
+        userId: currentUserId.value,
+        chatSessionId: currentSession.value.chatSessionId,
+        loginSessionId: props.currentUser.sessionId,
+        message: {
+          messageType: 1, // SPEECH
+          speechMessage: {
+            fileContent: uint8Array
+          }
+        }
+      }
+    );
+    if (rsp.success) {
+      await fetchMessages(currentSession.value.chatSessionId);
+    } else {
+      ElMessage.error(rsp.errmsg || '发送语音失败');
+    }
+  } catch (e) {
+    console.error("发送语音失败", e);
+    ElMessage.error('网络错误');
+  }
+};
+
+const playVoice = (msg) => {
+  const content = msg.message.speechMessage?.fileContent;
+  if (!content) return;
+  
+  let blob;
+  if (typeof content === 'string') {
+    // 处理 base64 字符串
+    const binary = atob(content);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        array[i] = binary.charCodeAt(i);
+    }
+    blob = new Blob([array], { type: 'audio/webm' });
+  } else {
+    // 处理字节数组
+    blob = new Blob([content], { type: 'audio/webm' });
+  }
+  
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  
+  playingMessageId.value = msg.messageId;
+  audio.onended = () => {
+    playingMessageId.value = null;
+  };
+  audio.onerror = () => {
+    playingMessageId.value = null;
+  };
+  
+  audio.play();
+};
+
+const recognizeSpeech = async (msg) => {
+  const content = msg.message.speechMessage?.fileContent;
+  if (!content) return;
+
+  let uint8Array;
+  if (typeof content === 'string') {
+    const binary = atob(content);
+    uint8Array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      uint8Array[i] = binary.charCodeAt(i);
+    }
+  } else {
+    uint8Array = new Uint8Array(content);
+  }
+
+  try {
+    const rsp = await sendRequest(
+      '/speech/speech_recognize',
+      'huzch.SpeechRecognizeReq',
+      'huzch.SpeechRecognizeRsp',
+      {
+        speechContent: uint8Array,
+        userId: currentUserId.value,
+        loginSessionId: props.currentUser.sessionId
+      }
+    );
+
+    if (rsp.success && rsp.recognitionResult) {
+      msg.recognizedText = rsp.recognitionResult;
+    } else {
+      ElMessage.error(rsp.errmsg || '识别失败');
+    }
+  } catch (e) {
+    console.error("语音识别失败", e);
+    ElMessage.error('识别服务不可用');
+  }
+};
 
 // 获取用户详细信息
 const fetchUserProfile = async () => {
@@ -1008,6 +1349,7 @@ const getSenderAvatar = (msg) => {
 .session-name {
   font-weight: 500;
   margin-bottom: 4px;
+  color: #000;
 }
 
 .session-preview {
@@ -1049,6 +1391,7 @@ const getSenderAvatar = (msg) => {
 
 .friend-name {
   font-weight: 500;
+  color: #000;
 }
 
 .sidebar-header {
@@ -1061,6 +1404,7 @@ const getSenderAvatar = (msg) => {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
+  color: #000;
 }
 
 .requests-list {
@@ -1085,6 +1429,7 @@ const getSenderAvatar = (msg) => {
 
 .request-name {
   font-weight: 500;
+  color: #000;
 }
 
 .request-actions {
@@ -1106,6 +1451,11 @@ const getSenderAvatar = (msg) => {
   align-items: center;
   padding: 0 20px;
   background-color: #f5f5f5;
+}
+
+.chat-header h3 {
+  color: #000;
+  margin: 0;
 }
 
 .message-list {
@@ -1168,6 +1518,161 @@ const getSenderAvatar = (msg) => {
   display: flex;
   gap: 15px;
   color: #666;
+  align-items: center;
+}
+
+.toolbar-icon {
+  cursor: pointer;
+  font-size: 20px;
+  transition: color 0.2s;
+}
+
+.toolbar-icon:hover {
+  color: #07c160;
+}
+
+.recording-active {
+  color: #f56c6c !important;
+  animation: pulse 1.5s infinite;
+}
+
+.recording-tip {
+  font-size: 12px;
+  color: #f56c6c;
+  margin-left: 5px;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.voice-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  min-width: 60px;
+  max-width: 150px;
+  height: 24px;
+}
+
+.voice-icon-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 5px;
+}
+
+.voice-wave {
+  width: 2px;
+  height: 8px;
+  background-color: #333;
+  border-radius: 1px;
+}
+
+.playing .voice-wave {
+  animation: voice-pulse 0.8s infinite ease-in-out;
+}
+
+.delay-1 { animation-delay: 0.2s !important; }
+.delay-2 { animation-delay: 0.4s !important; }
+
+@keyframes voice-pulse {
+  0% { height: 8px; }
+  50% { height: 16px; }
+  100% { height: 8px; }
+}
+
+.voice-duration {
+  font-size: 13px;
+  color: #333;
+}
+
+.voice-msg-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.recognized-text {
+  font-size: 13px;
+  color: #333;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  margin-top: 8px;
+  word-break: break-all;
+  border-left: 3px solid #07c160;
+}
+
+/* 右键菜单样式 */
+.msg-context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  padding: 5px 0;
+  z-index: 9999;
+  min-width: 100px;
+}
+
+.menu-item {
+  padding: 8px 15px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #000;
+}
+
+.menu-item:hover {
+  background: #f5f5f5;
+}
+
+.menu-item.delete {
+  color: #f56c6c;
+}
+
+.voice-msg .el-icon {
+  font-size: 18px;
+}
+
+.file-msg {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid #eee;
+  min-width: 200px;
+}
+
+.file-icon {
+  font-size: 32px;
+  color: #409eff;
+}
+
+.file-details {
+  flex: 1;
+  overflow: hidden;
+}
+
+.file-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #333;
+}
+
+.file-size {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
 }
 
 textarea {
