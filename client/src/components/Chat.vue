@@ -30,7 +30,18 @@
       <div v-if="activeTab === 'chat'">
         <div class="search-bar">
           <el-input v-model="searchText" placeholder="Search" prefix-icon="Search" size="small" style="flex: 1; margin-right: 5px;" />
-          <el-button circle size="small" :icon="Plus" @click="showAddFriend" />
+          <el-dropdown trigger="click">
+            <el-button circle size="small" :icon="Plus" />
+            <template #footer>
+              <!-- This part is for el-dropdown menu -->
+            </template>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item :icon="User" @click="showAddFriend">Add Friend</el-dropdown-item>
+                <el-dropdown-item :icon="CirclePlus" @click="showCreateGroup">Create Group</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
         <div class="session-list">
           <div 
@@ -100,11 +111,11 @@
           v-for="msg in messages" 
           :key="msg.messageId" 
           class="message-item"
-          :class="{ 'message-self': msg.sender.userId === currentUser.userId }"
+          :class="{ 'message-self': msg.sender.userId === currentUserId }"
         >
           <el-avatar :size="36" shape="square" :src="getSenderAvatar(msg)" class="msg-avatar" />
           <div class="msg-content-wrapper">
-            <div class="msg-name" v-if="msg.sender.userId !== currentUser.userId">{{ msg.sender.name }}</div>
+            <div class="msg-name" v-if="msg.sender.userId !== currentUserId">{{ msg.sender.name }}</div>
             <div class="msg-bubble">
               {{ getMessageContent(msg) }}
             </div>
@@ -206,12 +217,44 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- Create Group Dialog -->
+    <el-dialog v-model="createGroupVisible" title="Create Group Chat" width="450px" destroy-on-close>
+      <el-form :model="createGroupForm" label-width="100px">
+        <el-form-item label="Group Name" required>
+          <el-input v-model="createGroupForm.name" placeholder="Enter group name" />
+        </el-form-item>
+        <el-form-item label="Members" required>
+          <div class="member-selector">
+            <el-checkbox-group v-model="createGroupForm.selectedMembers">
+              <div v-for="friend in friends" :key="friend.userId" class="member-option">
+                <el-checkbox :label="friend.userId">
+                  <div class="member-item-content">
+                    <el-avatar :size="24" :src="friend.avatar ? 'data:image/png;base64,' + friend.avatar : defaultAvatar" />
+                    <span>{{ friend.name }}</span>
+                  </div>
+                </el-checkbox>
+              </div>
+            </el-checkbox-group>
+            <el-empty v-if="friends.length === 0" description="No friends to add" :image-size="40" />
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="createGroupVisible = false">Cancel</el-button>
+          <el-button type="primary" @click="createGroup" :loading="creatingGroup" :disabled="!createGroupForm.name || createGroupForm.selectedMembers.length === 0">
+            Create
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch, reactive } from 'vue';
-import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close, Bell } from '@element-plus/icons-vue';
+import { ref, onMounted, nextTick, watch, reactive, computed } from 'vue';
+import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close, Bell, CirclePlus } from '@element-plus/icons-vue';
 import { sendRequest } from '../api/client';
 import { getProtoType } from '../api/proto';
 import { WebSocketClient } from '../api/ws';
@@ -236,9 +279,8 @@ const inputMessage = ref('');
 const messageListRef = ref(null);
 let wsClient = null;
 
-// Profile Logic
-const profileVisible = ref(false);
 const userProfile = ref({});
+const currentUserId = computed(() => userProfile.value?.userId || props.currentUser.userId);
 const isEditingProfile = ref(false);
 const savingProfile = ref(false);
 const editProfileForm = reactive({
@@ -248,25 +290,30 @@ const editProfileForm = reactive({
   avatarFile: null
 });
 
-const showProfile = async () => {
-  profileVisible.value = true;
-  isEditingProfile.value = false;
+const fetchUserProfile = async () => {
   try {
     const rsp = await sendRequest(
       '/user/get_user_info',
       'huzch.GetUserInfoReq',
       'huzch.GetUserInfoRsp',
       {
-        userId: props.currentUser.userId,
+        userId: currentUserId.value, // Use original ID from props for the lookup
         loginSessionId: props.currentUser.sessionId
       }
     );
     if (rsp.success && rsp.userInfo) {
       userProfile.value = rsp.userInfo;
+      console.log("Global userId established:", userProfile.value.userId);
     }
   } catch (e) {
-    console.error("Failed to fetch profile", e);
+    console.error("Failed to establish global userId", e);
   }
+};
+
+const showProfile = async () => {
+  profileVisible.value = true;
+  isEditingProfile.value = false;
+  await fetchUserProfile();
 };
 
 const resetProfileMode = () => {
@@ -304,7 +351,7 @@ const saveProfile = async () => {
         'huzch.SetUserNameReq',
         'huzch.SetUserNameRsp',
         {
-          userId: props.currentUser.userId,
+          userId: currentUserId.value,
           userName: editProfileForm.name,
           loginSessionId: props.currentUser.sessionId
         }
@@ -318,7 +365,7 @@ const saveProfile = async () => {
         'huzch.SetUserDescriptionReq',
         'huzch.SetUserDescriptionRsp',
         {
-          userId: props.currentUser.userId,
+          userId: currentUserId.value,
           description: editProfileForm.description,
           loginSessionId: props.currentUser.sessionId
         }
@@ -332,7 +379,7 @@ const saveProfile = async () => {
         'huzch.SetUserAvatarReq',
         'huzch.SetUserAvatarRsp',
         {
-          userId: props.currentUser.userId,
+          userId: currentUserId.value,
           avatar: editProfileForm.avatarFile,
           loginSessionId: props.currentUser.sessionId
         }
@@ -359,6 +406,60 @@ const searchUserKey = ref('');
 const searchResults = ref([]);
 const searchPerformed = ref(false);
 
+// Create Group Logic
+const createGroupVisible = ref(false);
+const creatingGroup = ref(false);
+const createGroupForm = reactive({
+  name: '',
+  selectedMembers: []
+});
+
+const showCreateGroup = async () => {
+  createGroupForm.name = '';
+  createGroupForm.selectedMembers = [];
+  createGroupVisible.value = true;
+  // Ensure friends are loaded
+  if (friends.value.length === 0) {
+    await fetchFriends();
+  }
+};
+
+const createGroup = async () => {
+  creatingGroup.value = true;
+  try {
+    const members = [...createGroupForm.selectedMembers, currentUserId.value];
+    // console.log("Creating group with members:", members);
+    // console.log("userid:", currentUserId.value);
+    const rsp = await sendRequest(
+      '/friend/chat_session_create',
+      'huzch.ChatSessionCreateReq',
+      'huzch.ChatSessionCreateRsp',
+      {
+        chatSessionName: createGroupForm.name,
+        userId: currentUserId.value,
+        loginSessionId: props.currentUser.sessionId,
+        membersId: members
+      }
+    );
+
+    if (rsp.success) {
+      ElMessage.success('Group created');
+      createGroupVisible.value = false;
+      await fetchSessions();
+      if (rsp.chatSessionInfo) {
+        selectSession(rsp.chatSessionInfo);
+      }
+    } else {
+      ElMessage.error(rsp.errmsg || 'Failed to create group');
+    }
+  } catch (e) {
+    console.error("Create group failed", e);
+    ElMessage.error('Network error');
+  } finally {
+    creatingGroup.value = false;
+  }
+};
+
 const showAddFriend = () => {
   addFriendVisible.value = true;
   searchUserKey.value = '';
@@ -376,7 +477,7 @@ const searchUser = async () => {
       'huzch.UserSearchRsp',
       {
         searchKey: searchUserKey.value,
-        userId: props.currentUser.userId,
+        userId: currentUserId.value,
         loginSessionId: props.currentUser.sessionId
       }
     );
@@ -400,7 +501,7 @@ const addFriend = async (user) => {
       'huzch.FriendAddSendReq',
       'huzch.FriendAddSendRsp',
       {
-        userId: props.currentUser.userId,
+        userId: currentUserId.value,
         respondentId: user.userId,
         loginSessionId: props.currentUser.sessionId
       }
@@ -431,7 +532,7 @@ const fetchFriends = async () => {
       'huzch.GetFriendReq',
       'huzch.GetFriendRsp',
       {
-        userId: props.currentUser.userId,
+        userId: currentUserId.value,
         loginSessionId: props.currentUser.sessionId
       }
     );
@@ -477,7 +578,7 @@ const fetchFriendRequests = async () => {
       'huzch.GetRequesterReq',
       'huzch.GetRequesterRsp',
       {
-        userId: props.currentUser.userId,
+        userId: currentUserId.value,
         loginSessionId: props.currentUser.sessionId
       }
     );
@@ -496,7 +597,7 @@ const processRequest = async (req, agree) => {
       'huzch.FriendAddProcessReq',
       'huzch.FriendAddProcessRsp',
       {
-        userId: props.currentUser.userId,
+        userId: currentUserId.value,
         requesterId: req.userId,
         agree: agree,
         loginSessionId: props.currentUser.sessionId
@@ -525,6 +626,7 @@ const processRequest = async (req, agree) => {
 
 // Fetch sessions on mount
 onMounted(async () => {
+  await fetchUserProfile(); // Establish the real UUID first
   await fetchSessions();
   initWebSocket();
 });
@@ -610,7 +712,7 @@ const fetchSessions = async () => {
       'huzch.GetChatSessionReq',
       'huzch.GetChatSessionRsp',
       {
-        userId: props.currentUser.userId,
+        userId: currentUserId.value,
         loginSessionId: props.currentUser.sessionId
       }
     );
@@ -637,7 +739,7 @@ const fetchMessages = async (sessionId) => {
       {
         chatSessionId: sessionId,
         msgCount: 50,
-        userId: props.currentUser.userId,
+        userId: currentUserId.value,
         loginSessionId: props.currentUser.sessionId
       }
     );
@@ -662,7 +764,7 @@ const sendMessage = async () => {
     chatSessionId: currentSession.value.chatSessionId,
     timestamp: Math.floor(Date.now() / 1000),
     sender: {
-      userId: props.currentUser.userId,
+      userId: currentUserId.value,
       name: userProfile.value.name || props.currentUser.username,
       avatar: props.currentUser.avatarUrl ? props.currentUser.avatarUrl.replace('data:image/png;base64,', '') : null
     },
@@ -695,7 +797,7 @@ const sendMessage = async () => {
       'huzch.NewMessageReq',
       'huzch.NewMessageRsp',
       {
-        userId: props.currentUser.userId,
+        userId: currentUserId.value,
         chatSessionId: currentSession.value.chatSessionId,
         loginSessionId: props.currentUser.sessionId,
         message: {
@@ -856,6 +958,25 @@ const getSenderAvatar = (msg) => {
   margin-top: 20px;
   text-align: center;
   color: #999;
+}
+
+.member-selector {
+  border: 1px solid #dcdcdc;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.member-option {
+  margin-bottom: 5px;
+}
+
+.member-item-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
 }
 
 .session-list {
