@@ -698,9 +698,63 @@ const formatFileSize = (size) => {
 
 // 录音相关
 const isRecording = ref(false);
-let mediaRecorder = null;
-let audioChunks = [];
+let audioContext = null;
+let scriptProcessor = null;
+let audioSource = null;
+let recordedData = [];
+let mediaStream = null;
 const playingMessageId = ref(null);
+
+// 语音处理辅助函数
+const mergeBuffers = (buffers) => {
+  let totalLength = 0;
+  for (const buf of buffers) {
+    totalLength += buf.length;
+  }
+  const result = new Float32Array(totalLength);
+  let offset = 0;
+  for (const buf of buffers) {
+    result.set(buf, offset);
+    offset += buf.length;
+  }
+  return result;
+};
+
+const encodeWAV = (samples, sampleRate) => {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+  
+  const writeString = (view, offset, string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+  
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 32 + samples.length * 2, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+  
+  const floatTo16BitPCM = (output, offset, input) => {
+    for (let i = 0; i < input.length; i++, offset += 2) {
+      let s = Math.max(-1, Math.min(1, input[i]));
+      output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+  };
+  
+  floatTo16BitPCM(view, 44, samples);
+  
+  return buffer;
+};
 
 // 右键菜单状态
 const contextMenu = reactive({
@@ -742,17 +796,20 @@ const deleteMsg = (msg) => {
 
 const startRecording = async () => {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    audioChunks = [];
-    mediaRecorder.ondataavailable = (event) => {
-      audioChunks.push(event.data);
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+    audioSource = audioContext.createMediaStreamSource(mediaStream);
+    scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+    
+    recordedData = [];
+    scriptProcessor.onaudioprocess = (event) => {
+      const inputData = event.inputBuffer.getChannelData(0);
+      recordedData.push(new Float32Array(inputData));
     };
-    mediaRecorder.onstop = async () => {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-      await sendVoiceMessage(audioBlob);
-    };
-    mediaRecorder.start();
+    
+    audioSource.connect(scriptProcessor);
+    scriptProcessor.connect(audioContext.destination);
+    
     isRecording.value = true;
   } catch (err) {
     console.error("麦克风启动失败", err);
@@ -761,10 +818,27 @@ const startRecording = async () => {
 };
 
 const stopRecording = () => {
-  if (mediaRecorder && isRecording.value) {
-    mediaRecorder.stop();
+  if (scriptProcessor && isRecording.value) {
     isRecording.value = false;
-    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    
+    scriptProcessor.disconnect();
+    audioSource.disconnect();
+    
+    const audioData = mergeBuffers(recordedData);
+    const wavBuffer = encodeWAV(audioData, 16000);
+    const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+    
+    sendVoiceMessage(audioBlob);
+    
+    if (audioContext) {
+      audioContext.close();
+      audioContext = null;
+    }
+    
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => track.stop());
+      mediaStream = null;
+    }
   }
 };
 
@@ -843,14 +917,14 @@ const playVoice = async (msg) => {
       const binary = atob(content);
       const array = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
-      blob = new Blob([array], { type: 'audio/webm' });
+      blob = new Blob([array], { type: 'audio/wav' });
     } else if (content instanceof Uint8Array || ArrayBuffer.isView(content)) {
-      blob = new Blob([content], { type: 'audio/webm' });
+      blob = new Blob([content], { type: 'audio/wav' });
     } else if (content.data && Array.isArray(content.data)) {
       // 处理某些序列化后的对象格式 {type: 'Buffer', data: [...]}
-      blob = new Blob([new Uint8Array(content.data)], { type: 'audio/webm' });
+      blob = new Blob([new Uint8Array(content.data)], { type: 'audio/wav' });
     } else {
-      blob = new Blob([content], { type: 'audio/webm' });
+      blob = new Blob([content], { type: 'audio/wav' });
     }
   } catch (e) {
     console.error("处理语音数据失败", e);

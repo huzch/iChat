@@ -21,7 +21,7 @@ class SpeechServiceImpl : public SpeechService {
     response->set_request_id(request_id);
 
     std::string err;
-    std::string ret = _asr_client->recognize(request->speech_content(), err);
+    std::string ret = _asr_client->recognize(request->speech_content(), err, "wav");
     if (ret.empty()) {
       LOG_ERROR("{} 语音识别失败", request_id);
       response->set_success(false);
