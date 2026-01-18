@@ -67,7 +67,13 @@
             class="friend-item"
             @click="startChat(friend)"
           >
-            <el-avatar :size="40" shape="square" :src="friend.avatar ? 'data:image/png;base64,' + friend.avatar : defaultAvatar" />
+            <el-avatar 
+              :size="40" 
+              shape="square" 
+              :src="friend.avatar ? 'data:image/png;base64,' + friend.avatar : defaultAvatar" 
+              @click.stop="showOtherUserProfile(friend.userId)"
+              style="cursor: pointer;"
+            />
             <div class="friend-info">
               <div class="friend-name">{{ friend.name }}</div>
             </div>
@@ -96,7 +102,13 @@
     <!-- 右侧：聊天窗口 -->
     <div class="chat-window" v-if="currentSession">
       <div class="chat-header">
-        <h3>{{ currentSession.chatSessionName }}</h3>
+        <div style="flex: 1; display: flex; align-items: center;">
+          <h3>{{ currentSession.chatSessionName }}</h3>
+        </div>
+        <div class="header-actions">
+          <el-icon class="header-icon" @click="showHistorySearch"><Search /></el-icon>
+          <el-icon class="header-icon" @click="showSessionMembers"><MoreFilled /></el-icon>
+        </div>
       </div>
       
       <div class="message-list" ref="messageListRef" @click="closeContextMenu">
@@ -106,7 +118,14 @@
           class="message-item"
           :class="{ 'message-self': msg.sender.userId === currentUserId }"
         >
-          <el-avatar :size="36" shape="square" :src="getSenderAvatar(msg)" class="msg-avatar" />
+          <el-avatar 
+            :size="36" 
+            shape="square" 
+            :src="getSenderAvatar(msg)" 
+            class="msg-avatar" 
+            @click="showOtherUserProfile(msg.sender.userId)" 
+            style="cursor: pointer;"
+          />
           <div class="msg-content-wrapper">
             <div class="msg-name" v-if="msg.sender.userId !== currentUserId">{{ msg.sender.name }}</div>
             <div class="msg-bubble" @contextmenu.prevent="onContextMenu($event, msg)">
@@ -267,6 +286,21 @@
       </div>
     </el-dialog>
 
+    <!-- 查看他人资料对话框 -->
+    <el-dialog v-model="viewedUserVisible" title="用户信息" width="350px" center>
+      <div class="profile-content" v-if="viewedUser">
+        <div class="avatar-section">
+          <el-avatar :size="80" shape="square" :src="viewedUser.avatar ? 'data:image/png;base64,' + viewedUser.avatar : defaultAvatar" />
+        </div>
+        <div class="profile-info-view">
+          <h3>{{ viewedUser.name }}</h3>
+          <p class="info-item"><span class="label">ID:</span> {{ viewedUser.userId }}</p>
+          <p class="info-item" v-if="viewedUser.phone"><span class="label">手机号:</span> {{ viewedUser.phone }}</p>
+          <p class="info-item"><span class="label">简介:</span> {{ viewedUser.description || '暂无简介' }}</p>
+        </div>
+      </div>
+    </el-dialog>
+
     <!-- 添加好友对话框 -->
     <el-dialog v-model="addFriendVisible" title="添加好友" width="400px">
       <div class="add-friend-content">
@@ -283,7 +317,12 @@
         
         <div v-if="searchResults.length > 0" class="search-results">
           <div v-for="user in searchResults" :key="user.userId" class="user-result-item">
-            <el-avatar :size="36" :src="user.avatar ? 'data:image/png;base64,' + user.avatar : defaultAvatar" />
+            <el-avatar 
+              :size="36" 
+              :src="user.avatar ? 'data:image/png;base64,' + user.avatar : defaultAvatar" 
+              @click="showOtherUserProfile(user.userId)"
+              style="cursor: pointer;"
+            />
             <div class="user-result-info">
               <div class="name">{{ user.name }}</div>
               <div class="id">ID: {{ user.userId }}</div>
@@ -329,6 +368,90 @@
       </template>
     </el-dialog>
 
+    <!-- 查看群成员对话框 -->
+    <el-dialog v-model="sessionMembersVisible" :title="'成员列表' + (sessionMembers.length ? ` (${sessionMembers.length})` : '')" width="350px">
+      <div class="members-view">
+        <div v-for="member in sessionMembers" :key="member.userId" class="member-detail-item">
+          <el-avatar 
+            :size="36" 
+            shape="square" 
+            :src="member.avatar ? 'data:image/png;base64,' + member.avatar : defaultAvatar" 
+            @click="showOtherUserProfile(member.userId)"
+            style="cursor: pointer;"
+          />
+          <div class="member-detail-name">{{ member.name }}</div>
+        </div>
+        <el-empty v-if="sessionMembers.length === 0" description="暂无成员" :image-size="40" />
+      </div>
+    </el-dialog>
+
+    <!-- 查找历史消息对话框 -->
+    <el-dialog v-model="historySearchVisible" title="查找聊天记录" width="600px" destroy-on-close>
+      <div class="history-search-content">
+        <el-tabs v-model="historySearchTab" class="search-tabs">
+          <el-tab-pane label="关键字" name="keyword">
+            <el-input 
+              v-model="historySearchKey" 
+              placeholder="搜索消息内容" 
+              @keyup.enter="searchHistory"
+              clearable
+            >
+              <template #append>
+                <el-button :icon="Search" @click="searchHistory" />
+              </template>
+            </el-input>
+          </el-tab-pane>
+          
+          <el-tab-pane label="时间段" name="time">
+            <div class="search-form-item">
+              <el-date-picker
+                v-model="historySearchTimeRange"
+                type="datetimerange"
+                range-separator="至"
+                start-placeholder="开始时间"
+                end-placeholder="结束时间"
+                :default-time="[new Date(2000, 1, 1, 0, 0, 0), new Date(2000, 1, 1, 23, 59, 59)]"
+                style="width: 100%;"
+              />
+              <el-button type="primary" :icon="Search" @click="searchHistory" style="margin-top: 10px; width: 100%;">搜索时间段</el-button>
+            </div>
+          </el-tab-pane>
+          
+          <el-tab-pane label="最近消息" name="recent">
+            <div class="search-form-item">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span>获取最近消息条数：</span>
+                <el-input-number v-model="historySearchCount" :min="1" :max="500" />
+                <el-button type="primary" :icon="Search" @click="searchHistory">获取</el-button>
+              </div>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+        
+        <div class="history-results" v-if="historySearchResults.length > 0">
+          <div v-for="msg in historySearchResults" :key="msg.messageId" class="history-item">
+            <el-avatar 
+              :size="30" 
+              shape="square" 
+              :src="getSenderAvatar(msg)" 
+              @click="showOtherUserProfile(msg.sender.userId)"
+              style="cursor: pointer;"
+            />
+            <div class="history-info">
+              <div class="history-top">
+                <span class="name">{{ msg.sender.name }}</span>
+                <span class="time">{{ new Date(msg.timestamp * 1000).toLocaleString() }}</span>
+              </div>
+              <div class="content">{{ getMessageContent(msg) }}</div>
+            </div>
+          </div>
+        </div>
+        <div v-else-if="historySearchPerformed" class="no-history-results">
+          未找到相关聊天记录
+        </div>
+      </div>
+    </el-dialog>
+
     <!-- 右键菜单 -->
     <div v-if="contextMenu.show" class="msg-context-menu" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }">
       <div v-if="contextMenu.msg.message.messageType === 1 || contextMenu.msg.message.messageType === 'SPEECH'" 
@@ -341,7 +464,7 @@
 
 <script setup>
 import { ref, onMounted, nextTick, watch, reactive, computed } from 'vue';
-import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close, Bell, CirclePlus, Document, Picture, Iphone, Ticket } from '@element-plus/icons-vue';
+import { ChatDotRound, User, Search, Folder, Microphone, Plus, Edit, Check, Close, Bell, CirclePlus, Document, Picture, Iphone, Ticket, MoreFilled } from '@element-plus/icons-vue';
 import { sendRequest } from '../api/client';
 import { getProtoType } from '../api/proto';
 import { WebSocketClient } from '../api/ws';
@@ -403,6 +526,11 @@ const isBindingPhone = ref(false);
 const phoneCountdown = ref(0);
 const phoneVerifyCodeId = ref('');
 const savingProfile = ref(false);
+
+// 查看他人资料
+const viewedUser = ref(null);
+const viewedUserVisible = ref(false);
+
 const editProfileForm = reactive({
   name: '',
   description: '',
@@ -844,6 +972,35 @@ const showProfile = async () => {
   await fetchUserProfile();
 };
 
+const showOtherUserProfile = async (userId) => {
+  if (!userId) return;
+  if (userId === currentUserId.value) {
+    showProfile();
+    return;
+  }
+  
+  try {
+    const rsp = await sendRequest(
+      '/user/get_user_info',
+      'huzch.GetUserInfoReq',
+      'huzch.GetUserInfoRsp',
+      {
+        userId: userId,
+        loginSessionId: props.currentUser.sessionId
+      }
+    );
+    if (rsp.success && rsp.userInfo) {
+      viewedUser.value = rsp.userInfo;
+      viewedUserVisible.value = true;
+    } else {
+      ElMessage.error('获取用户信息失败');
+    }
+  } catch (e) {
+    console.error("获取用户信息失败", e);
+    ElMessage.error('网络错误');
+  }
+};
+
 const resetProfileMode = () => {
   isEditingProfile.value = false;
 };
@@ -1006,6 +1163,19 @@ const searchUserKey = ref('');
 const searchResults = ref([]);
 const searchPerformed = ref(false);
 
+// 查看成员逻辑
+const sessionMembersVisible = ref(false);
+const sessionMembers = ref([]);
+
+// 搜索历史逻辑
+const historySearchVisible = ref(false);
+const historySearchTab = ref('keyword');
+const historySearchKey = ref('');
+const historySearchTimeRange = ref([]);
+const historySearchCount = ref(50);
+const historySearchResults = ref([]);
+const historySearchPerformed = ref(false);
+
 // Create Group Logic
 const createGroupVisible = ref(false);
 const creatingGroup = ref(false);
@@ -1065,6 +1235,92 @@ const showAddFriend = () => {
   searchUserKey.value = '';
   searchResults.value = [];
   searchPerformed.value = false;
+};
+
+const showSessionMembers = async () => {
+  if (!currentSession.value) return;
+  sessionMembersVisible.value = true;
+  await fetchSessionMembers();
+};
+
+const fetchSessionMembers = async () => {
+  try {
+    const rsp = await sendRequest(
+      '/friend/get_chat_session_member',
+      'huzch.GetChatSessionMemberReq',
+      'huzch.GetChatSessionMemberRsp',
+      {
+        chatSessionId: currentSession.value.chatSessionId,
+        userId: currentUserId.value,
+        loginSessionId: props.currentUser.sessionId
+      }
+    );
+    if (rsp.success) {
+      sessionMembers.value = rsp.membersInfo || [];
+    }
+  } catch (e) {
+    console.error("Failed to fetch session members", e);
+  }
+};
+
+const showHistorySearch = () => {
+  historySearchVisible.value = true;
+  historySearchTab.value = 'keyword';
+  historySearchKey.value = '';
+  historySearchTimeRange.value = [];
+  historySearchCount.value = 50;
+  historySearchResults.value = [];
+  historySearchPerformed.value = false;
+};
+
+const searchHistory = async () => {
+  if (!currentSession.value) return;
+  
+  let url = '';
+  let reqType = '';
+  let rspType = '';
+  let payload = {
+    chatSessionId: currentSession.value.chatSessionId,
+    userId: currentUserId.value,
+    loginSessionId: props.currentUser.sessionId
+  };
+
+  if (historySearchTab.value === 'keyword') {
+    if (!historySearchKey.value.trim()) return;
+    url = '/message/message_search';
+    reqType = 'huzch.MessageSearchReq';
+    rspType = 'huzch.MessageSearchRsp';
+    payload.searchKey = historySearchKey.value;
+  } else if (historySearchTab.value === 'time') {
+    if (!historySearchTimeRange.value || historySearchTimeRange.value.length !== 2) {
+      ElMessage.warning('请选择时间段');
+      return;
+    }
+    url = '/message/get_history_message';
+    reqType = 'huzch.GetHistoryMessageReq';
+    rspType = 'huzch.GetHistoryMessageRsp';
+    payload.startTime = Math.floor(new Date(historySearchTimeRange.value[0]).getTime() / 1000);
+    payload.endTime = Math.floor(new Date(historySearchTimeRange.value[1]).getTime() / 1000);
+  } else if (historySearchTab.value === 'recent') {
+    url = '/message/get_recent_message';
+    reqType = 'huzch.GetRecentMessageReq';
+    rspType = 'huzch.GetRecentMessageRsp';
+    payload.msgCount = historySearchCount.value;
+  }
+
+  historySearchResults.value = [];
+  try {
+    const rsp = await sendRequest(url, reqType, rspType, payload);
+    historySearchPerformed.value = true;
+    if (rsp.success) {
+      historySearchResults.value = rsp.messagesInfo || [];
+    } else {
+      ElMessage.error(rsp.errmsg || '查询失败');
+    }
+  } catch (e) {
+    console.error("Search failed", e);
+    ElMessage.error('查询出错');
+  }
 };
 
 const searchUser = async () => {
@@ -1160,7 +1416,7 @@ const startChat = async (friend) => {
       activeTab.value = 'chat';
       selectSession(refreshedSession);
     } else {
-      ElMessage.warning('Chat session not found');
+      ElMessage.warning('未找到聊天会话');
     }
   }
 };
@@ -1577,6 +1833,97 @@ const getSenderAvatar = (msg) => {
   margin-left: 8px;
 }
 
+.members-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.member-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.member-detail-name {
+  font-size: 14px;
+  color: #333;
+}
+
+.history-search-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.search-tabs {
+  margin-bottom: 10px;
+}
+
+.search-form-item {
+  padding: 5px 0;
+}
+
+.history-results {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+
+.history-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+}
+
+.history-item:hover {
+  background-color: #f9f9f9;
+}
+
+.history-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow: hidden;
+}
+
+.history-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-top .name {
+  font-weight: 500;
+  font-size: 13px;
+  color: #666;
+}
+
+.history-top .time {
+  font-size: 11px;
+  color: #999;
+}
+
+.history-info .content {
+  font-size: 14px;
+  color: #333;
+  word-break: break-all;
+}
+
+.no-history-results {
+  text-align: center;
+  color: #999;
+  padding: 20px;
+}
+
 .session-list {
   flex: 1;
   overflow-y: auto;
@@ -1701,6 +2048,22 @@ const getSenderAvatar = (msg) => {
 .chat-header h3 {
   color: #000;
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.header-icon {
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.header-icon:hover {
+  color: #07c160;
 }
 
 .message-list {
