@@ -579,6 +579,37 @@ const handleImageChange = async (event) => {
 
 const sendImageMessage = async (content) => {
   if (!currentSession.value) return;
+
+  const base64Content = uint8ArrayToBase64(content);
+  const optimisticMsg = {
+    messageId: 'temp-' + Date.now(),
+    chatSessionId: currentSession.value.chatSessionId,
+    timestamp: Math.floor(Date.now() / 1000),
+    sender: {
+      userId: currentUserId.value,
+      name: userProfile.value.name || props.currentUser.username,
+      avatar: userProfile.value.avatar || (props.currentUser.avatarUrl ? props.currentUser.avatarUrl.replace('data:image/png;base64,', '') : null)
+    },
+    message: {
+      messageType: 2, // IMAGE
+      imageMessage: {
+        fileContent: base64Content
+      }
+    }
+  };
+
+  messages.value.push(optimisticMsg);
+  const session = sessions.value.find(s => s.chatSessionId === currentSession.value.chatSessionId);
+  if (session) {
+    session.prevMessage = optimisticMsg;
+    const index = sessions.value.indexOf(session);
+    if (index > 0) {
+      sessions.value.splice(index, 1);
+      sessions.value.unshift(session);
+    }
+  }
+  scrollToBottom();
+
   try {
     const rsp = await sendRequest(
       '/forward/new_message',
@@ -596,16 +627,59 @@ const sendImageMessage = async (content) => {
         loginSessionId: props.currentUser.sessionId
       }
     );
-    if (!rsp.success) {
+    if (rsp.success) {
+      if (rsp.messageInfo) {
+        const index = messages.value.findIndex(m => m.messageId === optimisticMsg.messageId);
+        if (index !== -1) {
+          messages.value[index] = rsp.messageInfo;
+          // 同时更新会话预览（确保 ID 和预览一致）
+          const session = sessions.value.find(s => s.chatSessionId === currentSession.value.chatSessionId);
+          if (session) session.prevMessage = rsp.messageInfo;
+        }
+      }
+    } else {
+      messages.value = messages.value.filter(m => m.messageId !== optimisticMsg.messageId);
       ElMessage.error('图片发送失败');
     }
   } catch (e) {
     console.error("发送图片失败", e);
+    messages.value = messages.value.filter(m => m.messageId !== optimisticMsg.messageId);
   }
 };
 
 const sendFileMessage = async (name, size, content) => {
   if (!currentSession.value) return;
+
+  const optimisticMsg = {
+    messageId: 'temp-' + Date.now(),
+    chatSessionId: currentSession.value.chatSessionId,
+    timestamp: Math.floor(Date.now() / 1000),
+    sender: {
+      userId: currentUserId.value,
+      name: userProfile.value.name || props.currentUser.username,
+      avatar: userProfile.value.avatar || (props.currentUser.avatarUrl ? props.currentUser.avatarUrl.replace('data:image/png;base64,', '') : null)
+    },
+    message: {
+      messageType: 3, // FILE
+      fileMessage: {
+        fileName: name,
+        fileSize: size,
+        fileContent: null // 不在 UI 预览中显示大文件内容
+      }
+    }
+  };
+
+  messages.value.push(optimisticMsg);
+  const session = sessions.value.find(s => s.chatSessionId === currentSession.value.chatSessionId);
+  if (session) {
+    session.prevMessage = optimisticMsg;
+    const index = sessions.value.indexOf(session);
+    if (index > 0) {
+      sessions.value.splice(index, 1);
+      sessions.value.unshift(session);
+    }
+  }
+  scrollToBottom();
 
   try {
     const rsp = await sendRequest(
@@ -627,12 +701,21 @@ const sendFileMessage = async (name, size, content) => {
       }
     );
     if (rsp.success) {
-      await fetchMessages(currentSession.value.chatSessionId);
+      if (rsp.messageInfo) {
+        const index = messages.value.findIndex(m => m.messageId === optimisticMsg.messageId);
+        if (index !== -1) {
+          messages.value[index] = rsp.messageInfo;
+          const session = sessions.value.find(s => s.chatSessionId === currentSession.value.chatSessionId);
+          if (session) session.prevMessage = rsp.messageInfo;
+        }
+      }
     } else {
+      messages.value = messages.value.filter(m => m.messageId !== optimisticMsg.messageId);
       ElMessage.error(rsp.errmsg || '发送文件失败');
     }
   } catch (e) {
     console.error("发送文件失败", e);
+    messages.value = messages.value.filter(m => m.messageId !== optimisticMsg.messageId);
     ElMessage.error('网络错误');
   }
 };
@@ -847,6 +930,36 @@ const sendVoiceMessage = async (blob) => {
   
   const arrayBuffer = await blob.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
+  const base64Content = uint8ArrayToBase64(uint8Array);
+
+  const optimisticMsg = {
+    messageId: 'temp-' + Date.now(),
+    chatSessionId: currentSession.value.chatSessionId,
+    timestamp: Math.floor(Date.now() / 1000),
+    sender: {
+      userId: currentUserId.value,
+      name: userProfile.value.name || props.currentUser.username,
+      avatar: userProfile.value.avatar || (props.currentUser.avatarUrl ? props.currentUser.avatarUrl.replace('data:image/png;base64,', '') : null)
+    },
+    message: {
+      messageType: 1, // SPEECH
+      speechMessage: {
+        fileContent: base64Content
+      }
+    }
+  };
+
+  messages.value.push(optimisticMsg);
+  const session = sessions.value.find(s => s.chatSessionId === currentSession.value.chatSessionId);
+  if (session) {
+    session.prevMessage = optimisticMsg;
+    const index = sessions.value.indexOf(session);
+    if (index > 0) {
+      sessions.value.splice(index, 1);
+      sessions.value.unshift(session);
+    }
+  }
+  scrollToBottom();
 
   try {
     const rsp = await sendRequest(
@@ -866,12 +979,21 @@ const sendVoiceMessage = async (blob) => {
       }
     );
     if (rsp.success) {
-      await fetchMessages(currentSession.value.chatSessionId);
+      if (rsp.messageInfo) {
+        const index = messages.value.findIndex(m => m.messageId === optimisticMsg.messageId);
+        if (index !== -1) {
+          messages.value[index] = rsp.messageInfo;
+          const session = sessions.value.find(s => s.chatSessionId === currentSession.value.chatSessionId);
+          if (session) session.prevMessage = rsp.messageInfo;
+        }
+      }
     } else {
+      messages.value = messages.value.filter(m => m.messageId !== optimisticMsg.messageId);
       ElMessage.error(rsp.errmsg || '发送语音失败');
     }
   } catch (e) {
     console.error("发送语音失败", e);
+    messages.value = messages.value.filter(m => m.messageId !== optimisticMsg.messageId);
     ElMessage.error('网络错误');
   }
 };
@@ -1694,7 +1816,7 @@ const sendMessage = async () => {
     sender: {
       userId: currentUserId.value,
       name: userProfile.value.name || props.currentUser.username,
-      avatar: props.currentUser.avatarUrl ? props.currentUser.avatarUrl.replace('data:image/png;base64,', '') : null
+      avatar: userProfile.value.avatar || (props.currentUser.avatarUrl ? props.currentUser.avatarUrl.replace('data:image/png;base64,', '') : null)
     },
     message: {
       messageType: 0,
@@ -1737,7 +1859,16 @@ const sendMessage = async () => {
       }
     );
 
-    if (!rsp.success) {
+    if (rsp.success) {
+      if (rsp.messageInfo) {
+        const index = messages.value.findIndex(m => m.messageId === optimisticMsg.messageId);
+        if (index !== -1) {
+          messages.value[index] = rsp.messageInfo;
+          const session = sessions.value.find(s => s.chatSessionId === currentSession.value.chatSessionId);
+          if (session) session.prevMessage = rsp.messageInfo;
+        }
+      }
+    } else {
       // 发送失败则移除乐观 UI 消息
       messages.value = messages.value.filter(m => m.messageId !== optimisticMsg.messageId);
       ElMessage.error(rsp.errmsg || '发送失败');
@@ -1758,19 +1889,31 @@ const scrollToBottom = () => {
   });
 };
 
+const uint8ArrayToBase64 = (arr) => {
+  let binary = '';
+  const len = arr.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(arr[i]);
+  }
+  return window.btoa(binary);
+};
+
 const getLastMessagePreview = (session) => {
   if (!session.prevMessage) return '';
   const msg = session.prevMessage.message;
-  if (msg.stringMessage) return msg.stringMessage.content;
-  if (msg.imageMessage) return '[图片]';
-  if (msg.fileMessage) return '[文件]';
-  if (msg.speechMessage) return '[语音]';
+  const type = msg.messageType;
+  
+  if (type === 0 || type === 'STRING') return msg.stringMessage?.content || '';
+  if (type === 1 || type === 'SPEECH') return '[语音]';
+  if (type === 2 || type === 'IMAGE') return '[图片]';
+  if (type === 3 || type === 'FILE') return '[文件]';
   return '';
 };
 
 const getMessageContent = (msg) => {
   if (!msg.message) return '';
-  if (msg.message.stringMessage) return msg.message.stringMessage.content;
+  const type = msg.message.messageType;
+  if (type === 0 || type === 'STRING') return msg.message.stringMessage?.content || '';
   return '[暂不支持的消息类型]';
 };
 
